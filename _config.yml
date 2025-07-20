@@ -7,8 +7,7 @@ sass:
 
 minima:
   skin: null
-  include:
-  head: head-custom.html
+
 
 # Make sure your custom stylesheet is included
 defaults:
@@ -27,6 +26,12 @@ defaults:
 include:
   - assets/css/custom.scss
   # Tell minima to use our custom head
+
+# Tell minima to use our custom head
+minima:
+  include:
+    head: head-custom.html
+
 
 
 
