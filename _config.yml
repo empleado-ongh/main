@@ -1,3 +1,38 @@
 title: rologs.com
-description: logs rologs.com
+description: logs de rologs.com
 theme: minima
+
+sass:
+  style: compressed
+
+minima:
+  skin: null
+  include:
+    head: head.html
+
+# Make sure your custom stylesheet is included
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+
+# Include custom CSS
+include:
+  - assets/css/custom.scss
+  # Tell minima to use our custom head
+
+# Tell minima to use our custom head
+minima:
+  include:
+    head: head-custom.html
+
+
+
+
