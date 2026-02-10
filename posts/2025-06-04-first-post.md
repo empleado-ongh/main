@@ -10,3 +10,8 @@ categories: blog
 
 ## 爸爸
 ### 你好
+
+<span style="font-size: 2em;">This text is larger</span>
+<span style="font-size: 150%;">This text is 50% larger</span>
+<span style="font-size: 20px;">This text is 20px</span>
+
