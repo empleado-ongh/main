@@ -15,3 +15,14 @@ categories: blog
 <span style="font-size: 150%;">This text is 50% larger</span>
 <span style="font-size: 20px;">This text is 20px</span>
 
+
+<style>
+.big-text {
+  font-size: 42px;
+}
+</style>
+<span class="big-text">Your text here</span>
+
+
+
+Test
