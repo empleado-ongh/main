@@ -1,5 +1,4 @@
 ---
 layout: home
-title: Home
+title: rologs.com
 ---
-Welcome to rologs.com
