@@ -1,12 +1,16 @@
 title: rologs.com
 description: Logs from rologs.com
 theme: minima
+lang: en
 
 sass:
   style: compressed
 
 plugins:
   - jekyll-feed
+
+header_pages:
+  - archive.md
 
 defaults:
   - scope:
@@ -19,6 +23,5 @@ defaults:
       type: "pages"
     values:
       layout: "page"
-
 
 
