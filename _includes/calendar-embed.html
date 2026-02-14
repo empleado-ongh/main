@@ -6,6 +6,10 @@
 
 <script>
   (function () {
+    const FEED_URL = "{{ '/assets/calendar.json' | relative_url }}";
+    const CACHE_KEY = 'home-calendar-events:v1';
+    const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
     function loadCssOnce(href, id) {
       if (id && document.getElementById(id)) return Promise.resolve();
 
@@ -57,24 +61,78 @@
             'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/zh-cn.global.min.js',
             'home-fullcalendar-locale'
           );
-        })
-        .then(function () {
-          return loadScriptOnce(
-            'https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js',
-            'home-ical-js'
-          );
-        })
-        .then(function () {
-          return loadScriptOnce(
-            'https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.10/index.global.min.js',
-            'home-fullcalendar-ical'
-          );
         });
 
       return window.__homeCalendarAssetsPromise;
     }
 
-    function render() {
+    function readCache() {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.events)) return null;
+        if (typeof parsed.ts !== 'number') return null;
+        if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
+        return parsed.events;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function writeCache(events) {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), events: events }));
+      } catch (_) {
+        // Ignore storage errors (private mode/quota).
+      }
+    }
+
+    function fetchJsonWithTimeout(url, timeoutMs) {
+      const controller = new AbortController();
+      const timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+
+      return fetch(url, { signal: controller.signal, credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .finally(function () {
+          clearTimeout(timer);
+        });
+    }
+
+    function cacheBustedUrl(url) {
+      // Bucketed cache-bust to avoid iOS Safari aggressively caching JSON forever.
+      const bucket = Math.floor(Date.now() / (60 * 60 * 1000)); // hourly
+      return url + (url.indexOf('?') === -1 ? '?' : '&') + 'v=' + bucket;
+    }
+
+    function loadEvents() {
+      const url = cacheBustedUrl(FEED_URL);
+
+      return fetchJsonWithTimeout(url, 8000)
+        .then(function (data) {
+          if (!Array.isArray(data)) throw new Error('Invalid feed format');
+          writeCache(data);
+          return data;
+        })
+        .catch(function () {
+          const cached = readCache();
+          if (cached) return cached;
+          throw new Error('Feed fetch failed');
+        });
+    }
+
+    function toUpcoming(events, limit) {
+      const now = new Date();
+      return events
+        .filter(function (e) { return e && e.start && new Date(e.start) >= now; })
+        .sort(function (a, b) { return new Date(a.start) - new Date(b.start); })
+        .slice(0, limit || 10);
+    }
+
+    function render(events) {
       const el = document.getElementById('home-calendar');
       if (!el) return;
 
@@ -87,37 +145,18 @@
       const fallback = el.querySelector('.home-calendar-fallback');
       if (fallback) fallback.remove();
 
+      const upcoming = toUpcoming(events || [], 10);
+
       const calendar = new FullCalendar.Calendar(el, {
         locale: 'zh-cn',
         // "Upcoming events" should be resilient even when the current month has none.
-        initialView: 'listYear',
+        views: {
+          listNextYear: { type: 'list', duration: { days: 365 } }
+        },
+        initialView: 'listNextYear',
         height: 'auto',
         headerToolbar: false,
-        events: {
-          // Served from the same origin (generated at build time by GitHub Actions).
-          url: "{{ '/assets/calendar.ics' | relative_url }}",
-          format: 'ics',
-          failure: function () {
-            // If the cached feed isn't available for some reason, fall back to the older proxy.
-            // This keeps the widget usable, even if less reliable than the cached feed.
-            calendar.removeAllEventSources();
-            calendar.addEventSource({
-              url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
-                'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
-              ),
-              format: 'ics'
-            });
-            calendar.refetchEvents();
-          }
-        },
-        eventDidMount: function () {
-          // Keep the list compact on the homepage.
-          const events = calendar.getEvents()
-            .filter(e => e.start && e.start >= new Date())
-            .sort((a, b) => a.start - b.start);
-
-          events.slice(10).forEach(e => e.remove());
-        }
+        events: upcoming
       });
 
       calendar.render();
@@ -125,12 +164,13 @@
 
     document.addEventListener('DOMContentLoaded', function () {
       ensureFullCalendar()
+        .then(loadEvents)
         .then(render)
         .catch(function () {
           const el = document.getElementById('home-calendar');
           if (!el) return;
           const fallback = el.querySelector('.home-calendar-fallback');
-          if (fallback) fallback.textContent = 'Calendar failed to load.';
+          if (fallback) fallback.textContent = 'Calendar unavailable. Please try again.';
         });
     });
   })();

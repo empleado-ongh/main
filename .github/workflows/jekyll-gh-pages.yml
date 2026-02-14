@@ -41,6 +41,7 @@ jobs:
 
           ICS_URL="https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141%40group.calendar.google.com/public/basic.ics"
           OUT="assets/calendar.ics"
+          OUT_JSON="assets/calendar.json"
 
           mkdir -p "$(dirname "$OUT")"
 
@@ -70,6 +71,85 @@ jobs:
 
           echo "::error::Failed to fetch a valid calendar feed."
           exit 1
+
+      - name: Build calendar JSON (for homepage embed)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import re
+          from datetime import datetime, timezone
+
+          ics_path = "assets/calendar.ics"
+          json_path = "assets/calendar.json"
+
+          with open(ics_path, "r", encoding="utf-8", errors="replace") as f:
+            raw_lines = f.read().splitlines()
+
+          # Unfold RFC 5545 folded lines (continuation lines start with space or tab).
+          lines = []
+          for line in raw_lines:
+            if (line.startswith(" ") or line.startswith("\t")) and lines:
+              lines[-1] += line[1:]
+            else:
+              lines.append(line)
+
+          vevents = []
+          cur = None
+          for line in lines:
+            if line == "BEGIN:VEVENT":
+              cur = {}
+              continue
+            if line == "END:VEVENT" and cur is not None:
+              vevents.append(cur)
+              cur = None
+              continue
+            if cur is None or ":" not in line:
+              continue
+            key, value = line.split(":", 1)
+            key = key.split(";", 1)[0]  # strip params (TZID, VALUE=DATE, etc)
+            if key in ("DTSTART", "DTEND", "SUMMARY", "UID"):
+              cur[key] = value
+
+          def parse_dt(value: str):
+            if not value:
+              return None
+            # Common Google Calendar formats.
+            if re.fullmatch(r"\d{8}T\d{6}Z", value):
+              dt = datetime.strptime(value, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+              return dt.isoformat().replace("+00:00", "Z")
+            if re.fullmatch(r"\d{8}T\d{6}", value):
+              # Treat floating time as UTC for consistency.
+              dt = datetime.strptime(value, "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+              return dt.isoformat().replace("+00:00", "Z")
+            if re.fullmatch(r"\d{8}", value):
+              d = datetime.strptime(value, "%Y%m%d").date()
+              return d.isoformat()
+            return None
+
+          out = []
+          for ev in vevents:
+            start = parse_dt(ev.get("DTSTART", ""))
+            if not start:
+              continue
+            end = parse_dt(ev.get("DTEND", ""))
+            item = {
+              "id": ev.get("UID", ""),
+              "title": (ev.get("SUMMARY", "") or "").strip(),
+              "start": start,
+            }
+            if end:
+              item["end"] = end
+            out.append(item)
+
+          out.sort(key=lambda e: e.get("start", ""))
+
+          with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+          print(f"Wrote {len(out)} events to {json_path}.")
+          PY
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
