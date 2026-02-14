@@ -1,68 +1,3 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>学习计划</title>
-
-<style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #ffffff;
-}
-
-.container {
-  max-width: 600px;
-  margin: auto;
-  padding: 16px;
-}
-
-h1 {
-  font-size: 20px;
-  margin-bottom: 16px;
-}
-
-.event-card {
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  border-radius: 14px;
-  background: #f7f7f7;
-  transition: transform 0.15s ease, background 0.15s ease;
-}
-
-.event-card:active {
-  transform: scale(0.98);
-  background: #ececec;
-}
-
-.event-date {
-  font-size: 13px;
-  color: #888;
-  margin-bottom: 4px;
-}
-
-.event-title {
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.empty {
-  color: #888;
-  font-size: 14px;
-}
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
-
-</head>
-<body>
-
-<div class="container">
-  <h1>即将到来的学习</h1>
-  <div id="events"></div>
-</div>
-
 <script>
 
 const icsUrl =
@@ -74,23 +9,55 @@ const icsUrl =
 fetch(icsUrl)
   .then(response => response.text())
   .then(data => {
+
     const jcalData = ICAL.parse(data);
     const comp = new ICAL.Component(jcalData);
-    const events = comp.getAllSubcomponents('vevent');
+    const vevents = comp.getAllSubcomponents('vevent');
 
     const now = new Date();
-    const upcoming = [];
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    events.forEach(event => {
-      const vevent = new ICAL.Event(event);
-      const start = vevent.startDate.toJSDate();
+    let upcoming = [];
 
-      if (start >= now) {
-        upcoming.push({
-          title: vevent.summary,
-          date: start,
-          description: vevent.description || ''
+    vevents.forEach(v => {
+      const event = new ICAL.Event(v);
+
+      // Handle recurring events
+      if (event.isRecurring()) {
+        const expand = new ICAL.RecurExpansion({
+          component: v,
+          dtstart: event.startDate
         });
+
+        let next;
+        let count = 0;
+
+        while ((next = expand.next()) && count < 20) {
+          const jsDate = next.toJSDate();
+          const eventDate = new Date(jsDate.getFullYear(), jsDate.getMonth(), jsDate.getDate());
+
+          if (eventDate >= today) {
+            upcoming.push({
+              title: event.summary,
+              date: jsDate,
+              description: event.description || ''
+            });
+          }
+          count++;
+        }
+
+      } else {
+
+        const start = event.startDate.toJSDate();
+        const eventDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+
+        if (eventDate >= today) {
+          upcoming.push({
+            title: event.summary,
+            date: start,
+            description: event.description || ''
+          });
+        }
       }
     });
 
@@ -99,6 +66,7 @@ fetch(icsUrl)
     const nextEvents = upcoming.slice(0, 10);
 
     const container = document.getElementById('events');
+    container.innerHTML = '';
 
     if (nextEvents.length === 0) {
       container.innerHTML = '<div class="empty">暂无未来活动</div>';
@@ -106,6 +74,7 @@ fetch(icsUrl)
     }
 
     nextEvents.forEach(event => {
+
       const card = document.createElement('div');
       card.className = 'event-card';
 
@@ -124,7 +93,7 @@ fetch(icsUrl)
       card.appendChild(date);
       card.appendChild(title);
 
-      // Handle click navigation
+      // ROUTE parsing
       const routeMatch = event.description.match(/ROUTE:(.*)/);
 
       if (routeMatch) {
@@ -140,12 +109,9 @@ fetch(icsUrl)
     });
 
   })
-  .catch(error => {
+  .catch(() => {
     document.getElementById('events').innerHTML =
       '<div class="empty">加载失败</div>';
   });
 
 </script>
-
-</body>
-</html>
