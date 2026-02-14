@@ -1,117 +1,47 @@
 <script>
+document.addEventListener('DOMContentLoaded', function() {
 
-const icsUrl =
-  'https://api.allorigins.win/raw?url=' +
-  encodeURIComponent(
-    'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
-  );
+  const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+    locale: 'zh-cn',
+    initialView: 'listMonth',
+    height: 'auto',
+    headerToolbar: false,
 
-fetch(icsUrl)
-  .then(response => response.text())
-  .then(data => {
+    events: {
+      url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
+        'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
+      ),
+      format: 'ics'
+    },
 
-    const jcalData = ICAL.parse(data);
-    const comp = new ICAL.Component(jcalData);
-    const vevents = comp.getAllSubcomponents('vevent');
+    eventClick: function(info) {
+      info.jsEvent.preventDefault();
 
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const description = info.event.extendedProps.description;
 
-    let upcoming = [];
+      if (!description) return;
 
-    vevents.forEach(v => {
-      const event = new ICAL.Event(v);
+      const urlMatch = description.match(/https?:\/\/[^\s]+/);
 
-      // Handle recurring events
-      if (event.isRecurring()) {
-        const expand = new ICAL.RecurExpansion({
-          component: v,
-          dtstart: event.startDate
-        });
-
-        let next;
-        let count = 0;
-
-        while ((next = expand.next()) && count < 20) {
-          const jsDate = next.toJSDate();
-          const eventDate = new Date(jsDate.getFullYear(), jsDate.getMonth(), jsDate.getDate());
-
-          if (eventDate >= today) {
-            upcoming.push({
-              title: event.summary,
-              date: jsDate,
-              description: event.description || ''
-            });
-          }
-          count++;
-        }
-
-      } else {
-
-        const start = event.startDate.toJSDate();
-        const eventDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-
-        if (eventDate >= today) {
-          upcoming.push({
-            title: event.summary,
-            date: start,
-            description: event.description || ''
-          });
-        }
+      if (urlMatch) {
+        window.location.href = urlMatch[0];
       }
-    });
+    },
 
-    upcoming.sort((a,b) => a.date - b.date);
+    eventDidMount: function(info) {
+      const events = calendar.getEvents()
+        .filter(e => e.start >= new Date())
+        .sort((a,b) => a.start - b.start);
 
-    const nextEvents = upcoming.slice(0, 10);
+      events.slice(10).forEach(e => e.remove());
 
-    const container = document.getElementById('events');
-    container.innerHTML = '';
-
-    if (nextEvents.length === 0) {
-      container.innerHTML = '<div class="empty">暂无未来活动</div>';
-      return;
+      // make cursor pointer
+      info.el.style.cursor = "pointer";
     }
 
-    nextEvents.forEach(event => {
-
-      const card = document.createElement('div');
-      card.className = 'event-card';
-
-      const date = document.createElement('div');
-      date.className = 'event-date';
-      date.innerText = event.date.toLocaleDateString('zh-CN', {
-        month: 'long',
-        day: 'numeric',
-        weekday: 'short'
-      });
-
-      const title = document.createElement('div');
-      title.className = 'event-title';
-      title.innerText = event.title;
-
-      card.appendChild(date);
-      card.appendChild(title);
-
-      // ROUTE parsing
-      const routeMatch = event.description.match(/ROUTE:(.*)/);
-
-      if (routeMatch) {
-        const route = routeMatch[1].trim();
-        card.style.cursor = 'pointer';
-
-        card.addEventListener('click', () => {
-          window.location.href = route;
-        });
-      }
-
-      container.appendChild(card);
-    });
-
-  })
-  .catch(() => {
-    document.getElementById('events').innerHTML =
-      '<div class="empty">加载失败</div>';
   });
 
+  calendar.render();
+
+});
 </script>
