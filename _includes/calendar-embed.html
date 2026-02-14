@@ -89,14 +89,26 @@
 
       const calendar = new FullCalendar.Calendar(el, {
         locale: 'zh-cn',
-        initialView: 'listMonth',
+        // "Upcoming events" should be resilient even when the current month has none.
+        initialView: 'listYear',
         height: 'auto',
         headerToolbar: false,
         events: {
-          url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
-            'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
-          ),
-          format: 'ics'
+          // Served from the same origin (generated at build time by GitHub Actions).
+          url: "{{ '/assets/calendar.ics' | relative_url }}",
+          format: 'ics',
+          failure: function () {
+            // If the cached feed isn't available for some reason, fall back to the older proxy.
+            // This keeps the widget usable, even if less reliable than the cached feed.
+            calendar.removeAllEventSources();
+            calendar.addEventSource({
+              url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
+                'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
+              ),
+              format: 'ics'
+            });
+            calendar.refetchEvents();
+          }
         },
         eventDidMount: function () {
           // Keep the list compact on the homepage.

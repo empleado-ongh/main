@@ -6,6 +6,10 @@ on:
   push:
     branches: ["main"]
 
+  # Keep the cached calendar feed fresh even when there are no code changes.
+  schedule:
+    - cron: "17 * * * *"
+
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -30,6 +34,42 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Fetch calendar feed (cache)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ICS_URL="https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141%40group.calendar.google.com/public/basic.ics"
+          OUT="assets/calendar.ics"
+
+          mkdir -p "$(dirname "$OUT")"
+
+          fetch() {
+            local url="$1"
+            curl -fsSL \
+              --retry 3 \
+              --retry-all-errors \
+              --connect-timeout 10 \
+              --max-time 30 \
+              -o "$OUT.tmp" \
+              "$url"
+          }
+
+          if fetch "$ICS_URL" && grep -q "BEGIN:VCALENDAR" "$OUT.tmp"; then
+            mv "$OUT.tmp" "$OUT"
+            echo "Fetched calendar feed from Google."
+            exit 0
+          fi
+
+          # Fallback to the last deployed feed so we don't deploy an empty calendar if Google is flaky.
+          if fetch "https://rologs.com/assets/calendar.ics" && grep -q "BEGIN:VCALENDAR" "$OUT.tmp"; then
+            mv "$OUT.tmp" "$OUT"
+            echo "Fetched calendar feed from rologs.com fallback."
+            exit 0
+          fi
+
+          echo "::error::Failed to fetch a valid calendar feed."
+          exit 1
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:

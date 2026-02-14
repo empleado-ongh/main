@@ -46,15 +46,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
     locale: 'zh-cn',
-    initialView: 'listMonth',
+    initialView: 'listYear',
     height: 'auto',
     headerToolbar: false,
 
     events: {
-      url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
-        'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
-      ),
-      format: 'ics'
+      // Cached and served from the same origin to avoid flaky third-party CORS proxies.
+      url: '/assets/calendar.ics',
+      format: 'ics',
+      failure: function () {
+        // Fallback for cases where the cached feed isn't available yet.
+        calendar.removeAllEventSources();
+        calendar.addEventSource({
+          url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
+            'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
+          ),
+          format: 'ics'
+        });
+        calendar.refetchEvents();
+      }
     },
 
     eventDidMount: function(info) {
