@@ -65,16 +65,16 @@ jobs:
             mv "$OUT.tmp" "$OUT"
             echo "Fetched calendar feed from Google."
             python3 - <<PY
-import json, os, time
-out = {
-  "source": "google",
-  "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-  "bytes": os.path.getsize("assets/calendar.ics"),
-}
-with open("${OUT_FETCH_META}", "w", encoding="utf-8") as f:
-  json.dump(out, f, separators=(",", ":"))
-print("Wrote ${OUT_FETCH_META}.")
-PY
+          import json, os, time
+          out = {
+            "source": "google",
+            "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "bytes": os.path.getsize("assets/calendar.ics"),
+          }
+          with open("${OUT_FETCH_META}", "w", encoding="utf-8") as f:
+            json.dump(out, f, separators=(",", ":"))
+          print("Wrote ${OUT_FETCH_META}.")
+          PY
             exit 0
           fi
 
@@ -83,16 +83,16 @@ PY
             mv "$OUT.tmp" "$OUT"
             echo "Fetched calendar feed from rologs.com fallback."
             python3 - <<PY
-import json, os, time
-out = {
-  "source": "fallback",
-  "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-  "bytes": os.path.getsize("assets/calendar.ics"),
-}
-with open("${OUT_FETCH_META}", "w", encoding="utf-8") as f:
-  json.dump(out, f, separators=(",", ":"))
-print("Wrote ${OUT_FETCH_META}.")
-PY
+          import json, os, time
+          out = {
+            "source": "fallback",
+            "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "bytes": os.path.getsize("assets/calendar.ics"),
+          }
+          with open("${OUT_FETCH_META}", "w", encoding="utf-8") as f:
+            json.dump(out, f, separators=(",", ":"))
+          print("Wrote ${OUT_FETCH_META}.")
+          PY
             exit 0
           fi
 
