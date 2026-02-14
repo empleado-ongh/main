@@ -8,7 +8,7 @@ on:
 
   # Keep the cached calendar feed fresh even when there are no code changes.
   schedule:
-    - cron: "17 * * * *"
+    - cron: "*/15 * * * *"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -42,6 +42,7 @@ jobs:
           ICS_URL="https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141%40group.calendar.google.com/public/basic.ics"
           OUT="assets/calendar.ics"
           OUT_JSON="assets/calendar.json"
+          OUT_FETCH_META="assets/calendar.fetch.json"
 
           mkdir -p "$(dirname "$OUT")"
 
@@ -50,6 +51,10 @@ jobs:
             curl -fsSL \
               --retry 3 \
               --retry-all-errors \
+              -4 \
+              --compressed \
+              -H "Accept: text/calendar,*/*" \
+              -A "Mozilla/5.0 (compatible; rologs-calendar-fetch/1.0)" \
               --connect-timeout 10 \
               --max-time 30 \
               -o "$OUT.tmp" \
@@ -59,6 +64,17 @@ jobs:
           if fetch "$ICS_URL" && grep -q "BEGIN:VCALENDAR" "$OUT.tmp"; then
             mv "$OUT.tmp" "$OUT"
             echo "Fetched calendar feed from Google."
+            python3 - <<PY
+import json, os, time
+out = {
+  "source": "google",
+  "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+  "bytes": os.path.getsize("assets/calendar.ics"),
+}
+with open("${OUT_FETCH_META}", "w", encoding="utf-8") as f:
+  json.dump(out, f, separators=(",", ":"))
+print("Wrote ${OUT_FETCH_META}.")
+PY
             exit 0
           fi
 
@@ -66,6 +82,17 @@ jobs:
           if fetch "https://rologs.com/assets/calendar.ics" && grep -q "BEGIN:VCALENDAR" "$OUT.tmp"; then
             mv "$OUT.tmp" "$OUT"
             echo "Fetched calendar feed from rologs.com fallback."
+            python3 - <<PY
+import json, os, time
+out = {
+  "source": "fallback",
+  "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+  "bytes": os.path.getsize("assets/calendar.ics"),
+}
+with open("${OUT_FETCH_META}", "w", encoding="utf-8") as f:
+  json.dump(out, f, separators=(",", ":"))
+print("Wrote ${OUT_FETCH_META}.")
+PY
             exit 0
           fi
 
@@ -149,6 +176,16 @@ jobs:
           with open(json_path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
           print(f"Wrote {len(out)} events to {json_path}.")
+
+          # Write meta for debugging staleness/fetch failures.
+          meta = { "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"), "events": len(out) }
+          try:
+            with open("assets/calendar.fetch.json", "r", encoding="utf-8") as f:
+              meta.update(json.load(f))
+          except Exception:
+            pass
+          with open("assets/calendar.meta.json", "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False, separators=(",", ":"))
           PY
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
