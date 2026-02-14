@@ -1,0 +1,334 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flashcards</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: rgba(255, 255, 255, 0.06);
+        --panel-2: rgba(255, 255, 255, 0.1);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.7);
+        --muted-2: rgba(255, 255, 255, 0.55);
+        --line: rgba(255, 255, 255, 0.12);
+        --accent: #9effd4;
+        --danger: #ff6b6b;
+        --radius: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        color: var(--text);
+        background: radial-gradient(
+            1200px 800px at 20% 20%,
+            rgba(158, 255, 212, 0.18),
+            transparent 60%
+          ),
+          radial-gradient(
+            1000px 700px at 80% 20%,
+            rgba(120, 145, 255, 0.18),
+            transparent 55%
+          ),
+          radial-gradient(
+            1200px 800px at 50% 90%,
+            rgba(255, 107, 107, 0.12),
+            transparent 50%
+          ),
+          var(--bg);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+
+      .wrap {
+        min-height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .card {
+        width: min(720px, 100%);
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, var(--panel), rgba(0, 0, 0, 0.08));
+        border-radius: var(--radius);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+        overflow: hidden;
+      }
+
+      .header {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .title {
+        font-weight: 700;
+        letter-spacing: 0.3px;
+      }
+
+      .status {
+        font-size: 12px;
+        color: var(--muted-2);
+        text-align: right;
+        max-width: 55%;
+        overflow-wrap: anywhere;
+      }
+
+      .body {
+        padding: 22px 20px 18px;
+      }
+
+      .prompt {
+        font-size: clamp(48px, 7vw, 92px);
+        line-height: 1.05;
+        letter-spacing: 0.5px;
+        padding: 10px 0 2px;
+      }
+
+      .meta {
+        color: var(--muted-2);
+        font-size: 14px;
+        margin-top: 6px;
+        min-height: 20px;
+      }
+
+      .answer {
+        margin-top: 16px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        font-size: 18px;
+        line-height: 1.35;
+        display: none;
+      }
+      .answer.show {
+        display: block;
+      }
+
+      .footer {
+        padding: 16px 20px 20px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-weight: 650;
+        letter-spacing: 0.2px;
+        cursor: pointer;
+        transition: transform 140ms ease, background 140ms ease,
+          border-color 140ms ease;
+        user-select: none;
+      }
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.09);
+        border-color: rgba(255, 255, 255, 0.18);
+        transform: translateY(-1px);
+      }
+      .btn:active {
+        transform: translateY(0px);
+      }
+      .btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .btn-primary {
+        border-color: rgba(158, 255, 212, 0.35);
+        background: rgba(158, 255, 212, 0.14);
+      }
+      .btn-primary:hover {
+        background: rgba(158, 255, 212, 0.2);
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .grade {
+        width: 52px;
+        text-align: center;
+        padding: 12px 0;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .error {
+        color: var(--danger);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <div class="header">
+          <div class="title">ANKI Flashcard</div>
+          <div class="status" id="status">Loading…</div>
+        </div>
+        <div class="body">
+          <div class="prompt" id="prompt"> </div>
+          <div class="meta" id="meta"></div>
+          <div class="answer" id="answer"></div>
+        </div>
+        <div class="footer">
+          <div class="btn-row">
+            <button class="btn btn-primary" id="revealBtn">Reveal</button>
+            <button class="btn" id="nextBtn" title="Skip without grading">
+              Next
+            </button>
+          </div>
+          <div class="btn-row">
+            <button class="btn grade" data-score="1" disabled>1</button>
+            <button class="btn grade" data-score="2" disabled>2</button>
+            <button class="btn grade" data-score="3" disabled>3</button>
+            <button class="btn grade" data-score="4" disabled>4</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let current = null;
+      let revealed = false;
+      let busy = false;
+
+      const statusEl = document.getElementById("status");
+      const promptEl = document.getElementById("prompt");
+      const metaEl = document.getElementById("meta");
+      const answerEl = document.getElementById("answer");
+      const revealBtn = document.getElementById("revealBtn");
+      const nextBtn = document.getElementById("nextBtn");
+      const gradeBtns = Array.from(document.querySelectorAll(".grade"));
+
+      function setStatus(text, isError) {
+        statusEl.textContent = text || "";
+        statusEl.classList.toggle("error", Boolean(isError));
+      }
+
+      function setBusy(nextBusy) {
+        busy = nextBusy;
+        revealBtn.disabled = busy || !current;
+        nextBtn.disabled = busy;
+        gradeBtns.forEach((b) => {
+          b.disabled = busy || !current || !revealed;
+        });
+      }
+
+      function renderCard(card) {
+        current = card;
+        revealed = false;
+
+        promptEl.textContent = card.prompt || "";
+        metaEl.textContent = "";
+        answerEl.textContent = card.answer || "";
+        answerEl.classList.remove("show");
+
+        setStatus("Ready");
+        setBusy(false);
+      }
+
+      function showError(err) {
+        const msg =
+          (err && (err.message || err.toString && err.toString())) ||
+          "Unknown error";
+        setStatus(msg, true);
+        setBusy(false);
+      }
+
+      function loadNextCard() {
+        setBusy(true);
+        setStatus("Loading…");
+        google.script.run
+          .withSuccessHandler(renderCard)
+          .withFailureHandler(showError)
+          .getNextCard();
+      }
+
+      function reveal() {
+        if (!current) return;
+        revealed = true;
+        metaEl.textContent = current.pinyin ? current.pinyin : "";
+        answerEl.classList.add("show");
+        setBusy(false);
+      }
+
+      function grade(score) {
+        if (!current) return;
+        setBusy(true);
+        setStatus("Saving…");
+
+        google.script.run
+          .withSuccessHandler(() => {
+            setStatus("Saved");
+            loadNextCard();
+          })
+          .withFailureHandler(showError)
+          .gradeCard(current.rowNumber, score);
+      }
+
+      revealBtn.addEventListener("click", () => {
+        if (busy) return;
+        reveal();
+      });
+
+      nextBtn.addEventListener("click", () => {
+        if (busy) return;
+        loadNextCard();
+      });
+
+      gradeBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (busy) return;
+          const score = Number(btn.dataset.score);
+          grade(score);
+        });
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (busy) return;
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          if (!revealed) reveal();
+          return;
+        }
+        if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
+          e.preventDefault();
+          grade(Number(e.key));
+        }
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          loadNextCard();
+        }
+      });
+
+      loadNextCard();
+    </script>
+  </body>
+</html>
