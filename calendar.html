@@ -1,3 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>即将到来的活动</title>
+
+<style>
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 20px;
+  background: #ffffff;
+}
+
+#calendar {
+  max-width: 500px;
+  margin: auto;
+}
+
+.fc {
+  font-size: 14px;
+}
+
+.fc-toolbar-title {
+  font-size: 18px;
+}
+
+.fc-button {
+  display: none; /* Hide navigation buttons for minimalist */
+}
+</style>
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/zh-cn.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.10/index.global.min.js"></script>
+
+</head>
+<body>
+
+<div id="calendar"></div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -14,34 +57,19 @@ document.addEventListener('DOMContentLoaded', function() {
       format: 'ics'
     },
 
-    eventClick: function(info) {
-      info.jsEvent.preventDefault();
-
-      const description = info.event.extendedProps.description;
-
-      if (!description) return;
-
-      const urlMatch = description.match(/https?:\/\/[^\s]+/);
-
-      if (urlMatch) {
-        window.location.href = urlMatch[0];
-      }
-    },
-
     eventDidMount: function(info) {
       const events = calendar.getEvents()
         .filter(e => e.start >= new Date())
         .sort((a,b) => a.start - b.start);
 
       events.slice(10).forEach(e => e.remove());
-
-      // make cursor pointer
-      info.el.style.cursor = "pointer";
     }
-
   });
 
   calendar.render();
 
 });
 </script>
+
+</body>
+</html>
