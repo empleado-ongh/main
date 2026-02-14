@@ -1,0 +1,33 @@
+<div class="home-calendar-frame">
+  <div id="home-calendar" class="home-calendar-widget" aria-label="Upcoming events"></div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const el = document.getElementById('home-calendar');
+    if (!el || !window.FullCalendar || !window.FullCalendar.Calendar) return;
+
+    const calendar = new FullCalendar.Calendar(el, {
+      locale: 'zh-cn',
+      initialView: 'listMonth',
+      height: 'auto',
+      headerToolbar: false,
+      events: {
+        url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
+          'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
+        ),
+        format: 'ics'
+      },
+      eventDidMount: function () {
+        // Keep the list compact on the homepage.
+        const events = calendar.getEvents()
+          .filter(e => e.start && e.start >= new Date())
+          .sort((a, b) => a.start - b.start);
+
+        events.slice(10).forEach(e => e.remove());
+      }
+    });
+
+    calendar.render();
+  });
+</script>

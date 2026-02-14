@@ -1,6 +1,7 @@
 ---
 layout: default
 title: Home
+calendar: true
 ---
 <section class="home-intro">
   <p class="home-eyebrow">ROLOGS</p>
@@ -33,4 +34,14 @@ title: Home
   {%- else -%}
     <p class="home-empty-state">No posts published yet.</p>
   {%- endif -%}
+</section>
+
+<section class="home-calendar" aria-labelledby="home-calendar-title">
+  <h2 class="home-section-title" id="home-calendar-title">Upcoming events</h2>
+  <div class="home-calendar-card">
+    {%- include calendar-embed.html -%}
+  </div>
+  <p class="home-calendar-link">
+    <a href="{{ '/calendar.html' | relative_url }}">Open calendar page</a>
+  </p>
 </section>

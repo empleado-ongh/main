@@ -159,6 +159,44 @@ a:hover {
   padding: 1rem;
 }
 
+.home-calendar {
+  margin-top: 1.7rem;
+}
+
+.home-calendar-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  box-shadow: 0 5px 20px rgba(20, 26, 38, 0.06);
+}
+
+.home-calendar-frame {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.home-calendar-link {
+  margin: 0.65rem 0 0;
+  font-size: 0.95rem;
+}
+
+.home-calendar .fc {
+  font-size: 14px;
+}
+
+.home-calendar .fc-list {
+  border: 0;
+}
+
+.home-calendar .fc-list-day-cushion {
+  background: rgba(0, 95, 115, 0.06);
+}
+
+.home-calendar .fc-list-event:hover td {
+  background: rgba(0, 95, 115, 0.08);
+}
+
 .archive-list {
   list-style: none;
   margin: 0;
@@ -182,6 +220,10 @@ a:hover {
 
   .home-intro {
     padding: 1.15rem 1rem;
+  }
+
+  .home-calendar-card {
+    padding: 0.85rem 0.85rem;
   }
 
   .archive-item {
