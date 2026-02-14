@@ -1,33 +1,125 @@
 <div class="home-calendar-frame">
-  <div id="home-calendar" class="home-calendar-widget" aria-label="Upcoming events"></div>
+  <div id="home-calendar" class="home-calendar-widget" aria-label="Upcoming events">
+    <p class="home-calendar-fallback">Loading upcoming events...</p>
+  </div>
 </div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const el = document.getElementById('home-calendar');
-    if (!el || !window.FullCalendar || !window.FullCalendar.Calendar) return;
+  (function () {
+    function loadCssOnce(href, id) {
+      if (id && document.getElementById(id)) return Promise.resolve();
 
-    const calendar = new FullCalendar.Calendar(el, {
-      locale: 'zh-cn',
-      initialView: 'listMonth',
-      height: 'auto',
-      headerToolbar: false,
-      events: {
-        url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
-          'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
-        ),
-        format: 'ics'
-      },
-      eventDidMount: function () {
-        // Keep the list compact on the homepage.
-        const events = calendar.getEvents()
-          .filter(e => e.start && e.start >= new Date())
-          .sort((a, b) => a.start - b.start);
+      return new Promise(function (resolve, reject) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        if (id) link.id = id;
+        link.onload = function () { resolve(); };
+        link.onerror = function () { reject(new Error('Failed to load CSS: ' + href)); };
+        document.head.appendChild(link);
+      });
+    }
 
-        events.slice(10).forEach(e => e.remove());
+    function loadScriptOnce(src, id) {
+      if (id && document.getElementById(id)) return Promise.resolve();
+
+      return new Promise(function (resolve, reject) {
+        const script = document.createElement('script');
+        script.src = src;
+        if (id) script.id = id;
+        script.defer = true;
+        script.onload = function () { resolve(); };
+        script.onerror = function () { reject(new Error('Failed to load script: ' + src)); };
+        document.head.appendChild(script);
+      });
+    }
+
+    function ensureFullCalendar() {
+      if (window.FullCalendar && window.FullCalendar.Calendar) return Promise.resolve();
+
+      // Avoid duplicate loads if this include runs more than once.
+      if (window.__homeCalendarAssetsPromise) return window.__homeCalendarAssetsPromise;
+
+      const css = loadCssOnce(
+        'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css',
+        'home-fullcalendar-css'
+      );
+
+      window.__homeCalendarAssetsPromise = css
+        .then(function () {
+          return loadScriptOnce(
+            'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js',
+            'home-fullcalendar-js'
+          );
+        })
+        .then(function () {
+          return loadScriptOnce(
+            'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/zh-cn.global.min.js',
+            'home-fullcalendar-locale'
+          );
+        })
+        .then(function () {
+          return loadScriptOnce(
+            'https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js',
+            'home-ical-js'
+          );
+        })
+        .then(function () {
+          return loadScriptOnce(
+            'https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.10/index.global.min.js',
+            'home-fullcalendar-ical'
+          );
+        });
+
+      return window.__homeCalendarAssetsPromise;
+    }
+
+    function render() {
+      const el = document.getElementById('home-calendar');
+      if (!el) return;
+
+      if (!window.FullCalendar || !window.FullCalendar.Calendar) {
+        const fallback = el.querySelector('.home-calendar-fallback');
+        if (fallback) fallback.textContent = 'Calendar failed to load.';
+        return;
       }
-    });
 
-    calendar.render();
-  });
+      const fallback = el.querySelector('.home-calendar-fallback');
+      if (fallback) fallback.remove();
+
+      const calendar = new FullCalendar.Calendar(el, {
+        locale: 'zh-cn',
+        initialView: 'listMonth',
+        height: 'auto',
+        headerToolbar: false,
+        events: {
+          url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
+            'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
+          ),
+          format: 'ics'
+        },
+        eventDidMount: function () {
+          // Keep the list compact on the homepage.
+          const events = calendar.getEvents()
+            .filter(e => e.start && e.start >= new Date())
+            .sort((a, b) => a.start - b.start);
+
+          events.slice(10).forEach(e => e.remove());
+        }
+      });
+
+      calendar.render();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      ensureFullCalendar()
+        .then(render)
+        .catch(function () {
+          const el = document.getElementById('home-calendar');
+          if (!el) return;
+          const fallback = el.querySelector('.home-calendar-fallback');
+          if (fallback) fallback.textContent = 'Calendar failed to load.';
+        });
+    });
+  })();
 </script>
