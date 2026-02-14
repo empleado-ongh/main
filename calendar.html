@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>日历</title>
+<title>即将到来的活动</title>
 
 <style>
 body {
@@ -26,22 +26,14 @@ body {
 }
 
 .fc-button {
-  padding: 4px 8px;
-  font-size: 12px;
+  display: none; /* Hide navigation buttons for minimalist */
 }
 </style>
 
-<!-- FullCalendar Core -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-
-<!-- Chinese locale -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/zh-cn.global.min.js"></script>
-
-<!-- ICAL.js (REQUIRED) -->
 <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
-
-<!-- iCalendar plugin (MUST be after ICAL.js) -->
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.10/index.global.min.js"></script>
 
 </head>
@@ -52,25 +44,26 @@ body {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-  const calendarEl = document.getElementById('calendar');
-
-  const calendar = new FullCalendar.Calendar(calendarEl, {
+  const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
     locale: 'zh-cn',
-    initialView: 'dayGridMonth',
-    height: 400,
-    headerToolbar: {
-      left: 'prev,next',
-      center: 'title',
-      right: ''
-    },
+    initialView: 'listMonth',
+    height: 'auto',
+    headerToolbar: false,
 
     events: {
       url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(
         'https://calendar.google.com/calendar/ical/e75be93f20e20f3b938b2c5af4ec78c4307101f054f7fde80cb32869f0c7c141@group.calendar.google.com/public/basic.ics'
       ),
       format: 'ics'
-    }
+    },
 
+    eventDidMount: function(info) {
+      const events = calendar.getEvents()
+        .filter(e => e.start >= new Date())
+        .sort((a,b) => a.start - b.start);
+
+      events.slice(10).forEach(e => e.remove());
+    }
   });
 
   calendar.render();
