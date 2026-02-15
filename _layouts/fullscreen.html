@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="{{ page.lang | default: site.lang | default: 'en' }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page.title | default: site.title }}</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        overflow: hidden;
+        background: #000;
+      }
+
+      .fullscreen-iframe {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100svh;
+        height: 100dvh;
+        border: 0;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    {{ content }}
+  </body>
+</html>
