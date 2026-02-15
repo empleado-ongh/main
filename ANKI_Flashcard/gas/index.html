@@ -432,215 +432,215 @@ Reveal
 </div>
 
 <script>
-let current = null;
-let prefetched = null;
-let revealed = false;
-let busy = false;
-let prefetching = false;
-let audioUnlocked = false;
+  let current = null;
+  let prefetched = null;
+  let revealed = false;
+  let busy = false;
+  let prefetching = false;
+  let audioUnlocked = false;
 
-const cardEl = document.getElementById("card");
-const statusEl = document.getElementById("status");
-const promptEl = document.getElementById("prompt");
-const metaEl = document.getElementById("meta");
-const answerEl = document.getElementById("answer");
-const audioEl = document.getElementById("audio");
-const playBtn = document.getElementById("playBtn");
-const revealBtn = document.getElementById("revealBtn");
-const nextBtn = document.getElementById("nextBtn");
-const gradeBtns = Array.from(document.querySelectorAll(".grade"));
+  const cardEl = document.getElementById("card");
+  const statusEl = document.getElementById("status");
+  const promptEl = document.getElementById("prompt");
+  const metaEl = document.getElementById("meta");
+  const answerEl = document.getElementById("answer");
+  const audioEl = document.getElementById("audio");
+  const playBtn = document.getElementById("playBtn");
+  const revealBtn = document.getElementById("revealBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  const gradeBtns = Array.from(document.querySelectorAll(".grade"));
 
-const preloadAudioEl = new Audio();
-preloadAudioEl.preload = "auto";
+  const preloadAudioEl = new Audio();
+  preloadAudioEl.preload = "auto";
 
-function setStatus(text, isError) {
-statusEl.textContent = text || "";
-statusEl.classList.toggle("error", Boolean(isError));
-}
+  function setStatus(text, isError) {
+    statusEl.textContent = text || "";
+    statusEl.classList.toggle("error", Boolean(isError));
+  }
 
-function setBusy(nextBusy) {
-busy = nextBusy;
-revealBtn.disabled = busy || !current || revealed;
-nextBtn.disabled = busy;
-gradeBtns.forEach((b) => {
-b.disabled = busy || !current || !revealed;
-});
-playBtn.disabled = busy || !current || !hasAudio_(current);
-}
+  function setBusy(nextBusy) {
+    busy = nextBusy;
+    revealBtn.disabled = busy || !current || revealed;
+    nextBtn.disabled = busy;
+    gradeBtns.forEach((b) => {
+      b.disabled = busy || !current || !revealed;
+    });
+    playBtn.disabled = busy || !current || !hasAudio_(current);
+  }
 
-// FIX 1: Check for audioData instead of path
-function hasAudio_(card) {
-  return Boolean(card && card.audioData);
-}
+  function hasAudio_(card) {
+    return Boolean(card && card.audioData);
+  }
 
-// FIX 2: Set the audio source directly to the Base64 data
-function setAudioSource_(card) {
-  audioEl.pause();
-  audioEl.currentTime = 0;
+  function setAudioSource_(card) {
+    audioEl.pause();
+    audioEl.currentTime = 0;
 
-  if (card && card.audioData) {
-    audioEl.src = card.audioData;
-    audioEl.load();
-  } else {
+    if (card && card.audioData) {
+      audioEl.src = card.audioData;
+      audioEl.load();
+      return;
+    }
+
     audioEl.removeAttribute("src");
     audioEl.load();
   }
-}
 
-async function playAudioFromStart_() {
-if (!audioEl.src) return;
-try {
-audioEl.pause();
-audioEl.currentTime = 0;
-await audioEl.play();
-audioUnlocked = true;
-} catch (err) {
-// iOS Safari blocks audio unless play() is called from a user gesture.
-}
-}
+  async function playAudioFromStart_() {
+    if (!audioEl.src) return;
+    try {
+      audioEl.pause();
+      audioEl.currentTime = 0;
+      await audioEl.play();
+      audioUnlocked = true;
+      // If this was the first user gesture to enable audio, make the UI reflect it.
+      setStatus("Ready");
+    } catch (err) {
+      // iOS Safari blocks audio unless play() is called from a user gesture.
+    }
+  }
 
-function renderCard(card) {
-current = card;
-revealed = false;
+  function renderCard(card) {
+    current = card;
+    revealed = false;
 
-cardEl.classList.remove("is-revealed");
+    cardEl.classList.remove("is-revealed");
 
-promptEl.textContent = card.prompt || "";
-metaEl.textContent = "";
-answerEl.textContent = card.answer || "";
-answerEl.classList.remove("show");
+    promptEl.textContent = card.prompt || "";
+    metaEl.textContent = "";
+    answerEl.textContent = card.answer || "";
+    answerEl.classList.remove("show");
 
-setAudioSource_(card);
+    setAudioSource_(card);
 
-if (hasAudio_(card) && !audioUnlocked) {
-setStatus('Tap the play button to enable audio');
-} else {
-setStatus("Ready");
-}
-setBusy(false);
-}
+    if (hasAudio_(card) && !audioUnlocked) {
+      setStatus("Tap the play button to enable audio");
+    } else {
+      setStatus("Ready");
+    }
+    setBusy(false);
+  }
 
-function showError(err) {
-const msg =
-(err && (err.message || err.toString && err.toString())) ||
-"Unknown error";
-setStatus(msg, true);
-setBusy(false);
-}
+  function showError(err) {
+    const msg =
+      (err && (err.message || (err.toString && err.toString()))) ||
+      "Unknown error";
+    setStatus(msg, true);
+    setBusy(false);
+  }
 
-// FIX 3: Update prefetch to use the data string
-function prefetchNextCard_() {
-  if (prefetching) return;
-  prefetching = true;
+  function prefetchNextCard_() {
+    if (prefetching) return;
+    prefetching = true;
+    google.script.run
+      .withSuccessHandler((card) => {
+        prefetched = card;
+        prefetching = false;
+        if (card && card.audioData) {
+          preloadAudioEl.src = card.audioData;
+          preloadAudioEl.load();
+        }
+      })
+      .withFailureHandler(() => {
+        prefetched = null;
+        prefetching = false;
+      })
+      .getNextCard();
+  }
+
+  function advanceToPrefetched_(shouldAutoplay) {
+    if (busy) return;
+    if (prefetched) {
+      const next = prefetched;
+      prefetched = null;
+      renderCard(next);
+      setBusy(false);
+      if (shouldAutoplay) playAudioFromStart_();
+      prefetchNextCard_();
+      return;
+    }
+
+    setBusy(true);
+    setStatus("Loading…");
+    google.script.run
+      .withSuccessHandler((card) => {
+        renderCard(card);
+        prefetchNextCard_();
+      })
+      .withFailureHandler(showError)
+      .getNextCard();
+  }
+
+  function reveal() {
+    if (!current) return;
+    revealed = true;
+    cardEl.classList.add("is-revealed");
+    metaEl.textContent = current.pinyin ? current.pinyin : "";
+    answerEl.classList.add("show");
+    setBusy(false);
+  }
+
+  function grade(score) {
+    if (!current) return;
+    const rowNumber = current.rowNumber;
+
+    google.script.run.withFailureHandler(showError).gradeCard(rowNumber, score);
+
+    advanceToPrefetched_(true);
+  }
+
+  revealBtn.addEventListener("click", () => {
+    if (busy) return;
+    reveal();
+  });
+
+  nextBtn.addEventListener("click", () => {
+    advanceToPrefetched_(true);
+  });
+
+  gradeBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (busy) return;
+      const score = Number(btn.dataset.score);
+      grade(score);
+    });
+  });
+
+  playBtn.addEventListener("click", () => {
+    if (busy || !current) return;
+    playAudioFromStart_();
+  });
+
+  audioEl.addEventListener("error", () => {
+    setStatus("Audio failed to load", true);
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (busy) return;
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      if (!revealed) reveal();
+      return;
+    }
+    if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
+      e.preventDefault();
+      grade(Number(e.key));
+    }
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      advanceToPrefetched_(false);
+    }
+  });
+
+  setBusy(true);
+  setStatus("Loading…");
   google.script.run
     .withSuccessHandler((card) => {
-      prefetched = card;
-      prefetching = false;
-      if (card && card.audioData) {
-        preloadAudioEl.src = card.audioData;
-        preloadAudioEl.load();
-      }
+      renderCard(card);
+      prefetchNextCard_();
     })
-    .withFailureHandler((err) => {
-      prefetched = null;
-      prefetching = false;
-    })
+    .withFailureHandler(showError)
     .getNextCard();
-}
-
-function advanceToPrefetched_(shouldAutoplay) {
-if (busy) return;
-if (prefetched) {
-const next = prefetched;
-prefetched = null;
-renderCard(next);
-setBusy(false);
-if (shouldAutoplay) playAudioFromStart_();
-prefetchNextCard_();
-return;
-}
-
-setBusy(true);
-setStatus("Loading…");
-google.script.run
-.withSuccessHandler((card) => {
-renderCard(card);
-prefetchNextCard_();
-})
-.withFailureHandler(showError)
-.getNextCard();
-}
-
-function reveal() {
-if (!current) return;
-revealed = true;
-cardEl.classList.add("is-revealed");
-metaEl.textContent = current.pinyin ? current.pinyin : "";
-answerEl.classList.add("show");
-setBusy(false);
-}
-
-function grade(score) {
-if (!current) return;
-const rowNumber = current.rowNumber;
-
-google.script.run.withFailureHandler(showError).gradeCard(rowNumber, score);
-
-advanceToPrefetched_(true);
-}
-
-revealBtn.addEventListener("click", () => {
-if (busy) return;
-reveal();
-});
-
-nextBtn.addEventListener("click", () => {
-advanceToPrefetched_(true);
-});
-
-gradeBtns.forEach((btn) => {
-btn.addEventListener("click", () => {
-if (busy) return;
-const score = Number(btn.dataset.score);
-grade(score);
-});
-});
-
-playBtn.addEventListener("click", () => {
-if (busy || !current) return;
-playAudioFromStart_();
-});
-
-audioEl.addEventListener("error", () => {
-setStatus("Audio failed to load", true);
-});
-
-window.addEventListener("keydown", (e) => {
-if (busy) return;
-if (e.key === " " || e.key === "Enter") {
-e.preventDefault();
-if (!revealed) reveal();
-return;
-}
-if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
-e.preventDefault();
-grade(Number(e.key));
-}
-if (e.key === "ArrowRight") {
-e.preventDefault();
-advanceToPrefetched_(false);
-}
-});
-
-setBusy(true);
-setStatus("Loading…");
-google.script.run
-.withSuccessHandler((card) => {
-renderCard(card);
-prefetchNextCard_();
-})
-.withFailureHandler(showError)
-.getNextCard();
 </script>
 </body>
 </html>
