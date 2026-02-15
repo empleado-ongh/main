@@ -119,10 +119,6 @@ overflow: visible;
 
 .audio-btn {
 appearance: none;
-position: absolute;
-top: 50%;
-right: 0;
-transform: translate(70%, -50%);
 width: 44px;
 height: 44px;
 border-radius: 999px;
@@ -140,14 +136,15 @@ touch-action: manipulation;
 .audio-btn:hover {
 background: rgba(255, 255, 255, 0.09);
 border-color: rgba(255, 255, 255, 0.18);
-transform: translate(70%, -50%) translateY(-1px);
+transform: translateY(-1px);
 }
 .audio-btn:active {
-transform: translate(70%, -50%);
+transform: translateY(0px);
 }
 .audio-btn:disabled {
 opacity: 0.45;
 cursor: not-allowed;
+transform: none;
 }
 
 .audio-ico {
@@ -354,13 +351,23 @@ padding: 14px 16px 16px;
 }
 
 .btn-row.actions {
-flex-direction: column;
-align-items: stretch;
+display: grid;
+grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+grid-template-areas:
+". play next"
+"reveal reveal reveal";
+align-items: center;
 }
 
 #nextBtn {
 width: auto;
-align-self: flex-end;
+grid-area: next;
+justify-self: end;
+}
+
+#playBtn {
+grid-area: play;
+justify-self: center;
 }
 
 .btn-reveal {
@@ -368,6 +375,10 @@ width: 100%;
 padding: 18px 16px;
 font-size: 16px;
 border-radius: 18px;
+}
+
+#revealBtn {
+grid-area: reveal;
 }
 
 .grade-row {
@@ -386,6 +397,14 @@ justify-content: center;
 <div class="body">
 <div class="prompt-wrap">
 <div class="prompt" id="prompt"> </div>
+</div>
+<audio id="audio" preload="auto"></audio>
+<div class="meta" id="meta"></div>
+<div class="divider" id="divider"></div>
+<div class="answer" id="answer"></div>
+</div>
+<div class="footer">
+<div class="btn-row actions">
 <button
 class="audio-btn"
 id="playBtn"
@@ -402,14 +421,6 @@ aria-hidden="true"
 <path d="M8 5v14l11-7z"></path>
 </svg>
 </button>
-</div>
-<audio id="audio" preload="auto"></audio>
-<div class="meta" id="meta"></div>
-<div class="divider" id="divider"></div>
-<div class="answer" id="answer"></div>
-</div>
-<div class="footer">
-<div class="btn-row actions">
 <button class="btn" id="nextBtn" title="Skip without grading">
 Next
 </button>
