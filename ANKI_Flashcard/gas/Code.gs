@@ -9,6 +9,10 @@
  *
  * Embedding:
  * - doGet() sets XFrameOptionsMode.ALLOWALL so it can render in an iframe.
+ *
+ * Audio (optional):
+ * - If the sheet has an "Audio_path" column (e.g. "1.mp3"), the web app can
+ *   serve it from Drive via `?audio=<filename>` and the UI can play it.
  */
 
 const CONFIG = {
@@ -22,6 +26,11 @@ const CONFIG = {
 
   // Optional (if present, set to the selected grade 1-4)
   SCORE_HEADER: "Score",
+
+  // Optional: mp3 filename in a Drive folder (e.g. "1.mp3").
+  AUDIO_HEADER: "Audio_path",
+  // Drive folder that contains the audio files referenced by AUDIO_HEADER.
+  AUDIO_FOLDER_ID: "1L7jo9HZw_QRj_Kn_fvB9enr5NsADgsyD",
 
   // Optional: if present, only TRUE rows are eligible.
   ENABLED_HEADER: "enabled",
@@ -38,7 +47,10 @@ const CONFIG = {
   HEADER_ROW: 1
 };
 
-function doGet() {
+function doGet(e) {
+  const audio = e && e.parameter && e.parameter.audio;
+  if (audio) return serveAudio_(audio);
+
   return HtmlService.createHtmlOutputFromFile("index")
     .setTitle("Flashcards")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -57,6 +69,7 @@ function getNextCard() {
   const promptCol = mustCol_(headerMap, CONFIG.PROMPT_HEADER, headerValues);
   const answerCol = mustCol_(headerMap, CONFIG.ANSWER_HEADER, headerValues);
   const pinyinCol = optionalCol_(headerMap, CONFIG.PINYIN_HEADER);
+  const audioCol = optionalCol_(headerMap, CONFIG.AUDIO_HEADER);
   const enabledCol = optionalCol_(headerMap, CONFIG.ENABLED_HEADER);
   const dayCol = optionalCol_(headerMap, CONFIG.DAY_HEADER);
 
@@ -87,7 +100,9 @@ function getNextCard() {
       rowNumber: r + 1, // 1-based sheet row number
       prompt: String(prompt),
       answer: String(row[answerCol] ?? ""),
-      pinyin: pinyinCol !== null ? String(row[pinyinCol] ?? "") : ""
+      pinyin: pinyinCol !== null ? String(row[pinyinCol] ?? "") : "",
+      audioPath:
+        audioCol !== null ? String(row[audioCol] ?? "").trim() : ""
     });
   }
 
@@ -245,3 +260,47 @@ function isTruthySheetValue_(value) {
   return ["true", "1", "yes", "y"].includes(s);
 }
 
+function serveAudio_(audioPath) {
+  const name = String(audioPath || "").trim();
+  if (!name) {
+    return ContentService.createTextOutput("Missing audio filename.").setMimeType(
+      ContentService.MimeType.TEXT
+    );
+  }
+
+  const cache = CacheService.getScriptCache();
+  const cacheKey = "audio_id:" + name;
+  const cachedId = cache.get(cacheKey);
+  if (cachedId) {
+    try {
+      const blob = DriveApp.getFileById(cachedId).getBlob();
+      blob.setName(name);
+      blob.setContentType("audio/mpeg");
+      return blob;
+    } catch (err) {
+      // Fall through to re-resolve by name.
+    }
+  }
+
+  const folderId = String(CONFIG.AUDIO_FOLDER_ID || "").trim();
+  if (!folderId) {
+    return ContentService.createTextOutput(
+      "Audio folder not configured (CONFIG.AUDIO_FOLDER_ID)."
+    ).setMimeType(ContentService.MimeType.TEXT);
+  }
+
+  const folder = DriveApp.getFolderById(folderId);
+  const files = folder.getFilesByName(name);
+  if (!files.hasNext()) {
+    return ContentService.createTextOutput('Audio not found: "' + name + '"').setMimeType(
+      ContentService.MimeType.TEXT
+    );
+  }
+
+  const file = files.next();
+  cache.put(cacheKey, file.getId(), 60 * 60 * 6); // 6h
+  const blob = file.getBlob();
+  blob.setName(name);
+  blob.setContentType("audio/mpeg");
+  return blob;
+}

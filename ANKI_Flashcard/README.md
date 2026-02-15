@@ -5,6 +5,7 @@ Minimal web app for reviewing Chinese flashcards:
 1. Shows 1 prompt (e.g., Hanzi)
 2. Reveal answer (e.g., meaning)
 3. Grade 1-4
+4. (Optional) Play audio per card
 4. Saves result to the sheet
 5. Loads next card
 
@@ -26,6 +27,9 @@ Minimal web app for reviewing Chinese flashcards:
    - `PROMPT_HEADER`: `Characters`
    - `ANSWER_HEADER`: `Answer`
    - `PINYIN_HEADER`: `Pinyin` (optional)
+   - Audio (optional):
+     - `AUDIO_HEADER`: `Audio_path` (sheet column with filenames like `1.mp3`)
+     - `AUDIO_FOLDER_ID`: Drive folder id containing those mp3 files
    - Optional: set `DAY_LIMIT` to only review rows where `Day <= DAY_LIMIT`
 5. Deploy:
    - Deploy > New deployment > Web app
@@ -62,7 +66,10 @@ Progress columns are auto-created (if missing) on first grade:
 Optional:
 - If your sheet has a `Score` column, it will also be set to the selected grade (1-4).
 - If you set `DAY_LIMIT` in `Code.gs`, only rows with `Day <= DAY_LIMIT` are eligible.
+- If your sheet has an `Audio_path` column, the UI shows a small play button next to the prompt.
 
 ## OAuth note
 
 `/Users/rogermoreno/Documents/ANKI_Flashcard/gas/Code.gs` uses `@OnlyCurrentDoc` + `SpreadsheetApp.getActiveSpreadsheet()` to keep scopes restricted to the current spreadsheet (helps avoid "This app is blocked" errors).
+
+Audio requires Drive read access (the script serves files from the configured Drive folder).
