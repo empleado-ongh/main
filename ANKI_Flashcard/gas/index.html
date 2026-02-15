@@ -1,675 +1,646 @@
 <!doctype html>
 <html>
-  <head>
-    <base target="_top" />
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Flashcards</title>
-    <style>
-      :root {
-        --bg: #0b1020;
-        --panel: rgba(255, 255, 255, 0.06);
-        --panel-2: rgba(255, 255, 255, 0.1);
-        --text: rgba(255, 255, 255, 0.92);
-        --muted: rgba(255, 255, 255, 0.7);
-        --muted-2: rgba(255, 255, 255, 0.55);
-        --line: rgba(255, 255, 255, 0.12);
-        --accent: #9effd4;
-        --danger: #ff6b6b;
-        --radius: 16px;
+<head>
+<base target="_top" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flashcards</title>
+<style>
+:root {
+--bg: #0b1020;
+--panel: rgba(255, 255, 255, 0.06);
+--panel-2: rgba(255, 255, 255, 0.1);
+--text: rgba(255, 255, 255, 0.92);
+--muted: rgba(255, 255, 255, 0.7);
+--muted-2: rgba(255, 255, 255, 0.55);
+--line: rgba(255, 255, 255, 0.12);
+--accent: #9effd4;
+--danger: #ff6b6b;
+--radius: 16px;
 
-        /* Grade colors (difficulty grouping; used later for logic) */
-        --grade-1: #a100ff;
-        --grade-2: #ff7a00;
-        --grade-3: #ffd000;
-        --grade-4: #45c04a;
+/* Grade colors (difficulty grouping; used later for logic) */
+--grade-1: #a100ff;
+--grade-2: #ff7a00;
+--grade-3: #ffd000;
+--grade-4: #45c04a;
+}
+
+* {
+box-sizing: border-box;
+}
+
+html,
+body {
+height: 100%;
+margin: 0;
+color: var(--text);
+background: radial-gradient(
+1200px 800px at 20% 20%,
+rgba(158, 255, 212, 0.18),
+transparent 60%
+),
+radial-gradient(
+1000px 700px at 80% 20%,
+rgba(120, 145, 255, 0.18),
+transparent 55%
+),
+radial-gradient(
+1200px 800px at 50% 90%,
+rgba(255, 107, 107, 0.12),
+transparent 50%
+),
+var(--bg);
+font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.wrap {
+min-height: 100%;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 24px;
+}
+
+.card {
+width: min(720px, 100%);
+border: 1px solid var(--line);
+background: linear-gradient(180deg, var(--panel), rgba(0, 0, 0, 0.08));
+border-radius: var(--radius);
+box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+overflow: hidden;
+}
+
+.header {
+display: flex;
+gap: 12px;
+justify-content: space-between;
+align-items: baseline;
+padding: 18px 20px;
+border-bottom: 1px solid var(--line);
+}
+
+.title {
+font-weight: 700;
+letter-spacing: 0.3px;
+}
+
+.status {
+font-size: 12px;
+color: var(--muted-2);
+text-align: right;
+max-width: 55%;
+overflow-wrap: anywhere;
+}
+
+.body {
+padding: 22px 20px 18px;
+}
+
+.prompt {
+text-align: center;
+font-family: ui-sans-serif, system-ui, -apple-system, "PingFang SC",
+"Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", Segoe UI, Roboto,
+Helvetica, Arial;
+font-size: clamp(88px, 30vw, 200px);
+line-height: 1.02;
+font-weight: 800;
+letter-spacing: 0.2px;
+padding: 6px 0 2px;
+text-shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
+overflow-wrap: anywhere;
+}
+
+.prompt-wrap {
+position: relative;
+display: inline-block;
+overflow: visible;
+}
+
+.audio-btn {
+appearance: none;
+position: absolute;
+top: 50%;
+right: 0;
+transform: translate(70%, -50%);
+width: 44px;
+height: 44px;
+border-radius: 999px;
+border: 1px solid var(--line);
+background: rgba(255, 255, 255, 0.06);
+color: rgba(255, 255, 255, 0.92);
+cursor: pointer;
+display: grid;
+place-items: center;
+transition: transform 140ms ease, background 140ms ease,
+border-color 140ms ease, opacity 140ms ease;
+user-select: none;
+touch-action: manipulation;
+}
+.audio-btn:hover {
+background: rgba(255, 255, 255, 0.09);
+border-color: rgba(255, 255, 255, 0.18);
+transform: translate(70%, -50%) translateY(-1px);
+}
+.audio-btn:active {
+transform: translate(70%, -50%);
+}
+.audio-btn:disabled {
+opacity: 0.45;
+cursor: not-allowed;
+}
+
+.audio-ico {
+width: 18px;
+height: 18px;
+display: block;
+}
+
+.meta {
+color: var(--muted-2);
+font-size: 16px;
+margin-top: 6px;
+text-align: center;
+display: none;
+}
+.card.is-revealed .meta {
+display: block;
+}
+
+.divider {
+display: none;
+width: min(520px, 74%);
+height: 2px;
+border-radius: 999px;
+margin: 18px auto 6px;
+background: rgba(255, 255, 255, 0.16);
+opacity: 0;
+transform: scaleX(0.85);
+transition: opacity 180ms ease, transform 220ms ease;
+}
+.card.is-revealed .divider {
+display: block;
+opacity: 1;
+transform: scaleX(1);
+}
+
+.answer {
+margin-top: 16px;
+padding: 0;
+border: 0;
+border-radius: 0;
+background: transparent;
+color: var(--text);
+font-size: clamp(22px, 6.2vw, 48px);
+line-height: 1.18;
+text-align: center;
+display: none;
+}
+.answer.show {
+display: block;
+}
+
+.footer {
+padding: 16px 20px 20px;
+border-top: 1px solid var(--line);
+display: flex;
+gap: 12px;
+flex-wrap: wrap;
+align-items: center;
+justify-content: space-between;
+}
+
+.btn {
+appearance: none;
+border: 1px solid var(--line);
+background: rgba(255, 255, 255, 0.06);
+color: var(--text);
+border-radius: 14px;
+padding: 12px 14px;
+font-weight: 650;
+letter-spacing: 0.2px;
+cursor: pointer;
+transition: transform 140ms ease, background 140ms ease,
+border-color 140ms ease;
+user-select: none;
+touch-action: manipulation;
+}
+.btn:hover {
+background: rgba(255, 255, 255, 0.09);
+border-color: rgba(255, 255, 255, 0.18);
+transform: translateY(-1px);
+}
+.btn:active {
+transform: translateY(0px);
+}
+.btn:disabled {
+opacity: 0.55;
+cursor: not-allowed;
+transform: none;
+}
+
+.btn-primary {
+border-color: rgba(158, 255, 212, 0.35);
+background: rgba(158, 255, 212, 0.14);
+}
+.btn-primary:hover {
+background: rgba(158, 255, 212, 0.2);
+}
+
+.btn-reveal {
+letter-spacing: 0.22em;
+text-transform: uppercase;
+padding: 14px 16px;
+}
+
+.btn-row {
+display: flex;
+gap: 10px;
+flex-wrap: wrap;
+align-items: center;
+}
+
+.grade {
+width: 56px;
+height: 56px;
+padding: 0;
+border-radius: 999px;
+border-color: transparent;
+text-align: center;
+font-variant-numeric: tabular-nums;
+font-weight: 800;
+font-size: 16px;
+color: rgba(255, 255, 255, 0.96);
+text-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.grade[data-score="1"] {
+background: var(--grade-1);
+}
+.grade[data-score="2"] {
+background: var(--grade-2);
+}
+.grade[data-score="3"] {
+background: var(--grade-3);
+color: rgba(10, 10, 10, 0.9);
+text-shadow: none;
+}
+.grade[data-score="4"] {
+background: var(--grade-4);
+}
+
+.grade-wrap {
+display: none;
+width: 100%;
+flex-direction: column;
+align-items: center;
+gap: 10px;
+}
+.card.is-revealed .grade-wrap {
+display: flex;
+}
+.card.is-revealed #revealBtn {
+display: none;
+}
+
+.grade-label {
+color: var(--muted);
+font-size: 14px;
+text-align: center;
+}
+
+.error {
+color: var(--danger);
+}
+
+/* Phone layout: fill the visible screen (incl. safe areas) and keep actions reachable. */
+@media (max-width: 520px) {
+.wrap {
+min-height: 100svh;
+padding: calc(10px + env(safe-area-inset-top))
+calc(10px + env(safe-area-inset-right))
+calc(10px + env(safe-area-inset-bottom))
+calc(10px + env(safe-area-inset-left));
+align-items: stretch;
+}
+
+.card {
+flex: 1;
+min-height: 0;
+display: flex;
+flex-direction: column;
+}
+
+.body {
+flex: 1;
+min-height: 0;
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+text-align: center;
+overflow: auto;
+-webkit-overflow-scrolling: touch;
+padding: 18px 16px 10px;
+}
+
+.footer {
+flex-shrink: 0;
+flex-wrap: nowrap;
+flex-direction: column;
+align-items: stretch;
+justify-content: flex-end;
+padding: 14px 16px 16px;
+}
+
+.btn-row.actions {
+flex-direction: column;
+align-items: stretch;
+}
+
+#nextBtn {
+width: auto;
+align-self: flex-end;
+}
+
+.btn-reveal {
+width: 100%;
+padding: 18px 16px;
+font-size: 16px;
+border-radius: 18px;
+}
+
+.grade-row {
+justify-content: center;
+}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card" id="card">
+<div class="header">
+<div class="title">ANKI Flashcard</div>
+<div class="status" id="status">Loading…</div>
+</div>
+<div class="body">
+<div class="prompt-wrap">
+<div class="prompt" id="prompt"> </div>
+<button
+class="audio-btn"
+id="playBtn"
+title="Play audio"
+aria-label="Play audio"
+disabled
+>
+<svg
+class="audio-ico"
+viewBox="0 0 24 24"
+fill="currentColor"
+aria-hidden="true"
+>
+<path d="M8 5v14l11-7z"></path>
+</svg>
+</button>
+</div>
+<audio id="audio" preload="auto"></audio>
+<div class="meta" id="meta"></div>
+<div class="divider" id="divider"></div>
+<div class="answer" id="answer"></div>
+</div>
+<div class="footer">
+<div class="btn-row actions">
+<button class="btn" id="nextBtn" title="Skip without grading">
+Next
+</button>
+<button class="btn btn-primary btn-reveal" id="revealBtn">
+Reveal
+</button>
+</div>
+
+<div class="grade-wrap" id="gradeWrap">
+<div class="grade-label">How well did you know this?</div>
+<div class="btn-row grade-row">
+<button class="btn grade" data-score="1" disabled>1</button>
+<button class="btn grade" data-score="2" disabled>2</button>
+<button class="btn grade" data-score="3" disabled>3</button>
+<button class="btn grade" data-score="4" disabled>4</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+let current = null;
+let prefetched = null;
+let revealed = false;
+let busy = false;
+let prefetching = false;
+let audioUnlocked = false;
+
+const cardEl = document.getElementById("card");
+const statusEl = document.getElementById("status");
+const promptEl = document.getElementById("prompt");
+const metaEl = document.getElementById("meta");
+const answerEl = document.getElementById("answer");
+const audioEl = document.getElementById("audio");
+const playBtn = document.getElementById("playBtn");
+const revealBtn = document.getElementById("revealBtn");
+const nextBtn = document.getElementById("nextBtn");
+const gradeBtns = Array.from(document.querySelectorAll(".grade"));
+
+const preloadAudioEl = new Audio();
+preloadAudioEl.preload = "auto";
+
+function setStatus(text, isError) {
+statusEl.textContent = text || "";
+statusEl.classList.toggle("error", Boolean(isError));
+}
+
+function setBusy(nextBusy) {
+busy = nextBusy;
+revealBtn.disabled = busy || !current || revealed;
+nextBtn.disabled = busy;
+gradeBtns.forEach((b) => {
+b.disabled = busy || !current || !revealed;
+});
+playBtn.disabled = busy || !current || !hasAudio_(current);
+}
+
+// FIX 1: Check for audioData instead of path
+function hasAudio_(card) {
+  return Boolean(card && card.audioData);
+}
+
+// FIX 2: Set the audio source directly to the Base64 data
+function setAudioSource_(card) {
+  audioEl.pause();
+  audioEl.currentTime = 0;
+
+  if (card && card.audioData) {
+    audioEl.src = card.audioData;
+    audioEl.load();
+  } else {
+    audioEl.removeAttribute("src");
+    audioEl.load();
+  }
+}
+
+async function playAudioFromStart_() {
+if (!audioEl.src) return;
+try {
+audioEl.pause();
+audioEl.currentTime = 0;
+await audioEl.play();
+audioUnlocked = true;
+} catch (err) {
+// iOS Safari blocks audio unless play() is called from a user gesture.
+}
+}
+
+function renderCard(card) {
+current = card;
+revealed = false;
+
+cardEl.classList.remove("is-revealed");
+
+promptEl.textContent = card.prompt || "";
+metaEl.textContent = "";
+answerEl.textContent = card.answer || "";
+answerEl.classList.remove("show");
+
+setAudioSource_(card);
+
+if (hasAudio_(card) && !audioUnlocked) {
+setStatus('Tap the play button to enable audio');
+} else {
+setStatus("Ready");
+}
+setBusy(false);
+}
+
+function showError(err) {
+const msg =
+(err && (err.message || err.toString && err.toString())) ||
+"Unknown error";
+setStatus(msg, true);
+setBusy(false);
+}
+
+// FIX 3: Update prefetch to use the data string
+function prefetchNextCard_() {
+  if (prefetching) return;
+  prefetching = true;
+  google.script.run
+    .withSuccessHandler((card) => {
+      prefetched = card;
+      prefetching = false;
+      if (card && card.audioData) {
+        preloadAudioEl.src = card.audioData;
+        preloadAudioEl.load();
       }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-        color: var(--text);
-        background: radial-gradient(
-            1200px 800px at 20% 20%,
-            rgba(158, 255, 212, 0.18),
-            transparent 60%
-          ),
-          radial-gradient(
-            1000px 700px at 80% 20%,
-            rgba(120, 145, 255, 0.18),
-            transparent 55%
-          ),
-          radial-gradient(
-            1200px 800px at 50% 90%,
-            rgba(255, 107, 107, 0.12),
-            transparent 50%
-          ),
-          var(--bg);
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-          Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      }
-
-      .wrap {
-        min-height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-      }
-
-      .card {
-        width: min(720px, 100%);
-        border: 1px solid var(--line);
-        background: linear-gradient(180deg, var(--panel), rgba(0, 0, 0, 0.08));
-        border-radius: var(--radius);
-        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
-        overflow: hidden;
-      }
-
-      .header {
-        display: flex;
-        gap: 12px;
-        justify-content: space-between;
-        align-items: baseline;
-        padding: 18px 20px;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .title {
-        font-weight: 700;
-        letter-spacing: 0.3px;
-      }
-
-      .status {
-        font-size: 12px;
-        color: var(--muted-2);
-        text-align: right;
-        max-width: 55%;
-        overflow-wrap: anywhere;
-      }
-
-      .body {
-        padding: 22px 20px 18px;
-      }
-
-      .prompt {
-        text-align: center;
-        font-family: ui-sans-serif, system-ui, -apple-system, "PingFang SC",
-          "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", Segoe UI, Roboto,
-          Helvetica, Arial;
-        font-size: clamp(88px, 30vw, 200px);
-        line-height: 1.02;
-        font-weight: 800;
-        letter-spacing: 0.2px;
-        padding: 6px 0 2px;
-        text-shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
-        overflow-wrap: anywhere;
-      }
-
-      .prompt-wrap {
-        position: relative;
-        display: inline-block;
-        overflow: visible;
-      }
-
-      .audio-btn {
-        appearance: none;
-        position: absolute;
-        top: 50%;
-        right: 0;
-        transform: translate(70%, -50%);
-        width: 44px;
-        height: 44px;
-        border-radius: 999px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.06);
-        color: rgba(255, 255, 255, 0.92);
-        cursor: pointer;
-        display: grid;
-        place-items: center;
-        transition: transform 140ms ease, background 140ms ease,
-          border-color 140ms ease, opacity 140ms ease;
-        user-select: none;
-        touch-action: manipulation;
-      }
-      .audio-btn:hover {
-        background: rgba(255, 255, 255, 0.09);
-        border-color: rgba(255, 255, 255, 0.18);
-        transform: translate(70%, -50%) translateY(-1px);
-      }
-      .audio-btn:active {
-        transform: translate(70%, -50%);
-      }
-      .audio-btn:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-      }
-
-      .audio-ico {
-        width: 18px;
-        height: 18px;
-        display: block;
-      }
-
-      .meta {
-        color: var(--muted-2);
-        font-size: 16px;
-        margin-top: 6px;
-        text-align: center;
-        display: none;
-      }
-      .card.is-revealed .meta {
-        display: block;
-      }
-
-      .divider {
-        display: none;
-        width: min(520px, 74%);
-        height: 2px;
-        border-radius: 999px;
-        margin: 18px auto 6px;
-        background: rgba(255, 255, 255, 0.16);
-        opacity: 0;
-        transform: scaleX(0.85);
-        transition: opacity 180ms ease, transform 220ms ease;
-      }
-      .card.is-revealed .divider {
-        display: block;
-        opacity: 1;
-        transform: scaleX(1);
-      }
-
-      .answer {
-        margin-top: 16px;
-        padding: 0;
-        border: 0;
-        border-radius: 0;
-        background: transparent;
-        color: var(--text);
-        font-size: clamp(22px, 6.2vw, 48px);
-        line-height: 1.18;
-        text-align: center;
-        display: none;
-      }
-      .answer.show {
-        display: block;
-      }
-
-      .footer {
-        padding: 16px 20px 20px;
-        border-top: 1px solid var(--line);
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      .btn {
-        appearance: none;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.06);
-        color: var(--text);
-        border-radius: 14px;
-        padding: 12px 14px;
-        font-weight: 650;
-        letter-spacing: 0.2px;
-        cursor: pointer;
-        transition: transform 140ms ease, background 140ms ease,
-          border-color 140ms ease;
-        user-select: none;
-        touch-action: manipulation;
-      }
-      .btn:hover {
-        background: rgba(255, 255, 255, 0.09);
-        border-color: rgba(255, 255, 255, 0.18);
-        transform: translateY(-1px);
-      }
-      .btn:active {
-        transform: translateY(0px);
-      }
-      .btn:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-        transform: none;
-      }
-
-      .btn-primary {
-        border-color: rgba(158, 255, 212, 0.35);
-        background: rgba(158, 255, 212, 0.14);
-      }
-      .btn-primary:hover {
-        background: rgba(158, 255, 212, 0.2);
-      }
-
-      .btn-reveal {
-        letter-spacing: 0.22em;
-        text-transform: uppercase;
-        padding: 14px 16px;
-      }
-
-      .btn-row {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-
-      .grade {
-        width: 56px;
-        height: 56px;
-        padding: 0;
-        border-radius: 999px;
-        border-color: transparent;
-        text-align: center;
-        font-variant-numeric: tabular-nums;
-        font-weight: 800;
-        font-size: 16px;
-        color: rgba(255, 255, 255, 0.96);
-        text-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
-      }
-
-      .grade[data-score="1"] {
-        background: var(--grade-1);
-      }
-      .grade[data-score="2"] {
-        background: var(--grade-2);
-      }
-      .grade[data-score="3"] {
-        background: var(--grade-3);
-        color: rgba(10, 10, 10, 0.9);
-        text-shadow: none;
-      }
-      .grade[data-score="4"] {
-        background: var(--grade-4);
-      }
-
-      .grade-wrap {
-        display: none;
-        width: 100%;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-      }
-      .card.is-revealed .grade-wrap {
-        display: flex;
-      }
-      .card.is-revealed #revealBtn {
-        display: none;
-      }
-
-      .grade-label {
-        color: var(--muted);
-        font-size: 14px;
-        text-align: center;
-      }
-
-      .error {
-        color: var(--danger);
-      }
-
-      /* Phone layout: fill the visible screen (incl. safe areas) and keep actions reachable. */
-      @media (max-width: 520px) {
-        .wrap {
-          min-height: 100svh;
-          padding: calc(10px + env(safe-area-inset-top))
-            calc(10px + env(safe-area-inset-right))
-            calc(10px + env(safe-area-inset-bottom))
-            calc(10px + env(safe-area-inset-left));
-          align-items: stretch;
-        }
-
-        .card {
-          flex: 1;
-          min-height: 0;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .body {
-          flex: 1;
-          min-height: 0;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          text-align: center;
-          overflow: auto;
-          -webkit-overflow-scrolling: touch;
-          padding: 18px 16px 10px;
-        }
-
-        .footer {
-          flex-shrink: 0;
-          flex-wrap: nowrap;
-          flex-direction: column;
-          align-items: stretch;
-          justify-content: flex-end;
-          padding: 14px 16px 16px;
-        }
-
-        .btn-row.actions {
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        #nextBtn {
-          width: auto;
-          align-self: flex-end;
-        }
-
-        .btn-reveal {
-          width: 100%;
-          padding: 18px 16px;
-          font-size: 16px;
-          border-radius: 18px;
-        }
-
-        .grade-row {
-          justify-content: center;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <div class="card" id="card">
-        <div class="header">
-          <div class="title">ANKI Flashcard</div>
-          <div class="status" id="status">Loading…</div>
-        </div>
-        <div class="body">
-          <div class="prompt-wrap">
-            <div class="prompt" id="prompt"> </div>
-            <button
-              class="audio-btn"
-              id="playBtn"
-              title="Play audio"
-              aria-label="Play audio"
-              disabled
-            >
-              <svg
-                class="audio-ico"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M8 5v14l11-7z"></path>
-              </svg>
-            </button>
-          </div>
-          <audio id="audio" preload="auto"></audio>
-          <div class="meta" id="meta"></div>
-          <div class="divider" id="divider"></div>
-          <div class="answer" id="answer"></div>
-        </div>
-        <div class="footer">
-          <div class="btn-row actions">
-            <button class="btn" id="nextBtn" title="Skip without grading">
-              Next
-            </button>
-            <button class="btn btn-primary btn-reveal" id="revealBtn">
-              Reveal
-            </button>
-          </div>
-
-          <div class="grade-wrap" id="gradeWrap">
-            <div class="grade-label">How well did you know this?</div>
-            <div class="btn-row grade-row">
-              <button class="btn grade" data-score="1" disabled>1</button>
-              <button class="btn grade" data-score="2" disabled>2</button>
-              <button class="btn grade" data-score="3" disabled>3</button>
-              <button class="btn grade" data-score="4" disabled>4</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      let current = null;
-      let prefetched = null;
-      let revealed = false;
-      let busy = false;
-      let prefetching = false;
-      let audioUnlocked = false;
-
-      const cardEl = document.getElementById("card");
-      const statusEl = document.getElementById("status");
-      const promptEl = document.getElementById("prompt");
-      const metaEl = document.getElementById("meta");
-      const answerEl = document.getElementById("answer");
-      const audioEl = document.getElementById("audio");
-      const playBtn = document.getElementById("playBtn");
-      const revealBtn = document.getElementById("revealBtn");
-      const nextBtn = document.getElementById("nextBtn");
-      const gradeBtns = Array.from(document.querySelectorAll(".grade"));
-
-      const preloadAudioEl = new Audio();
-      preloadAudioEl.preload = "auto";
-
-      function setStatus(text, isError) {
-        statusEl.textContent = text || "";
-        statusEl.classList.toggle("error", Boolean(isError));
-      }
-
-      function setBusy(nextBusy) {
-        busy = nextBusy;
-        revealBtn.disabled = busy || !current || revealed;
-        nextBtn.disabled = busy;
-        gradeBtns.forEach((b) => {
-          b.disabled = busy || !current || !revealed;
-        });
-        playBtn.disabled = busy || !current || !hasAudio_(current);
-      }
-
-      function hasAudio_(card) {
-        return Boolean(card && card.audioPath && String(card.audioPath).trim());
-      }
-
-      function audioUrlFor_(card) {
-        const audioPath = card && card.audioPath ? String(card.audioPath).trim() : "";
-        if (!audioPath) return "";
-
-        // Supported Audio_path formats:
-        // 1) Full URL (recommended if Drive auth is blocked)
-        // 2) Drive file id (we convert to a public `uc` link)
-        // 3) Filename like "1.mp3" (served by this web app via `?audio=...`, requires Drive scopes)
-        if (/^https?:\/\//i.test(audioPath)) return audioPath;
-        if (/^[a-zA-Z0-9_-]{20,}$/.test(audioPath)) {
-          return (
-            "https://drive.google.com/uc?export=download&id=" +
-            encodeURIComponent(audioPath)
-          );
-        }
-
-        const base = window.location.href.split("?")[0];
-        return base + "?audio=" + encodeURIComponent(audioPath);
-      }
-
-      function setAudioSource_(card) {
-        const url = audioUrlFor_(card);
-        audioEl.pause();
-        audioEl.currentTime = 0;
-
-        if (!url) {
-          audioEl.removeAttribute("src");
-          audioEl.load();
-          return;
-        }
-        audioEl.src = url;
-        audioEl.load();
-      }
-
-      async function playAudioFromStart_() {
-        if (!audioEl.src) return;
-        try {
-          audioEl.pause();
-          audioEl.currentTime = 0;
-          await audioEl.play();
-          audioUnlocked = true;
-        } catch (err) {
-          // iOS Safari blocks audio unless play() is called from a user gesture.
-          // When blocked, the user can tap the play button and it should work.
-        }
-      }
-
-      function renderCard(card) {
-        current = card;
-        revealed = false;
-
-        cardEl.classList.remove("is-revealed");
-
-        promptEl.textContent = card.prompt || "";
-        metaEl.textContent = "";
-        answerEl.textContent = card.answer || "";
-        answerEl.classList.remove("show");
-
-        setAudioSource_(card);
-
-        if (hasAudio_(card) && !audioUnlocked) {
-          setStatus('Tap the play button to enable audio');
-        } else {
-          setStatus("Ready");
-        }
-        setBusy(false);
-      }
-
-      function showError(err) {
-        const msg =
-          (err && (err.message || err.toString && err.toString())) ||
-          "Unknown error";
-        setStatus(msg, true);
-        setBusy(false);
-      }
-
-      function prefetchNextCard_() {
-        if (prefetching) return;
-        prefetching = true;
-        google.script.run
-          .withSuccessHandler((card) => {
-            prefetched = card;
-            prefetching = false;
-
-            const url = audioUrlFor_(card);
-            if (url) {
-              preloadAudioEl.src = url;
-              preloadAudioEl.load();
-            }
-          })
-          .withFailureHandler((err) => {
-            prefetched = null;
-            prefetching = false;
-            // Don't show an error here; user may still be reviewing the current card.
-          })
-          .getNextCard();
-      }
-
-      // iPhone/iPad Safari requirement: call audio.play() inside a user gesture.
-      // We advance to a prefetched card so the click handler can both render + play.
-      function advanceToPrefetched_(shouldAutoplay) {
-        if (busy) return;
-        if (prefetched) {
-          const next = prefetched;
-          prefetched = null;
-          renderCard(next);
-          setBusy(false);
-          if (shouldAutoplay) playAudioFromStart_();
-          prefetchNextCard_();
-          return;
-        }
-
-        // Fallback: fetch on-demand (autoplay will likely be blocked on iOS because it's async).
-        setBusy(true);
-        setStatus("Loading…");
-        google.script.run
-          .withSuccessHandler((card) => {
-            renderCard(card);
-            prefetchNextCard_();
-          })
-          .withFailureHandler(showError)
-          .getNextCard();
-      }
-
-      function reveal() {
-        if (!current) return;
-        revealed = true;
-        cardEl.classList.add("is-revealed");
-        metaEl.textContent = current.pinyin ? current.pinyin : "";
-        answerEl.classList.add("show");
-        setBusy(false);
-      }
-
-      function grade(score) {
-        if (!current) return;
-        const rowNumber = current.rowNumber;
-
-        // Save in the background so we can advance (and autoplay) on iOS.
-        google.script.run.withFailureHandler(showError).gradeCard(rowNumber, score);
-
-        // Advance immediately from the click gesture; this enables autoplay on iPhone.
-        advanceToPrefetched_(true);
-      }
-
-      revealBtn.addEventListener("click", () => {
-        if (busy) return;
-        reveal();
-      });
-
-      nextBtn.addEventListener("click", () => {
-        advanceToPrefetched_(true);
-      });
-
-      gradeBtns.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          if (busy) return;
-          const score = Number(btn.dataset.score);
-          grade(score);
-        });
-      });
-
-      playBtn.addEventListener("click", () => {
-        if (busy || !current) return;
-        playAudioFromStart_();
-      });
-
-      audioEl.addEventListener("error", () => {
-        // Don't block review flow; user can still try again (network hiccup, etc.).
-        setStatus("Audio failed to load", true);
-      });
-
-      window.addEventListener("keydown", (e) => {
-        if (busy) return;
-        if (e.key === " " || e.key === "Enter") {
-          e.preventDefault();
-          if (!revealed) reveal();
-          return;
-        }
-        if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
-          e.preventDefault();
-          grade(Number(e.key));
-        }
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          advanceToPrefetched_(false);
-        }
-      });
-
-      // Initial load: show a card (audio can't autoplay on iOS without a gesture).
-      setBusy(true);
-      setStatus("Loading…");
-      google.script.run
-        .withSuccessHandler((card) => {
-          renderCard(card);
-          prefetchNextCard_();
-        })
-        .withFailureHandler(showError)
-        .getNextCard();
-    </script>
-  </body>
+    })
+    .withFailureHandler((err) => {
+      prefetched = null;
+      prefetching = false;
+    })
+    .getNextCard();
+}
+
+function advanceToPrefetched_(shouldAutoplay) {
+if (busy) return;
+if (prefetched) {
+const next = prefetched;
+prefetched = null;
+renderCard(next);
+setBusy(false);
+if (shouldAutoplay) playAudioFromStart_();
+prefetchNextCard_();
+return;
+}
+
+setBusy(true);
+setStatus("Loading…");
+google.script.run
+.withSuccessHandler((card) => {
+renderCard(card);
+prefetchNextCard_();
+})
+.withFailureHandler(showError)
+.getNextCard();
+}
+
+function reveal() {
+if (!current) return;
+revealed = true;
+cardEl.classList.add("is-revealed");
+metaEl.textContent = current.pinyin ? current.pinyin : "";
+answerEl.classList.add("show");
+setBusy(false);
+}
+
+function grade(score) {
+if (!current) return;
+const rowNumber = current.rowNumber;
+
+google.script.run.withFailureHandler(showError).gradeCard(rowNumber, score);
+
+advanceToPrefetched_(true);
+}
+
+revealBtn.addEventListener("click", () => {
+if (busy) return;
+reveal();
+});
+
+nextBtn.addEventListener("click", () => {
+advanceToPrefetched_(true);
+});
+
+gradeBtns.forEach((btn) => {
+btn.addEventListener("click", () => {
+if (busy) return;
+const score = Number(btn.dataset.score);
+grade(score);
+});
+});
+
+playBtn.addEventListener("click", () => {
+if (busy || !current) return;
+playAudioFromStart_();
+});
+
+audioEl.addEventListener("error", () => {
+setStatus("Audio failed to load", true);
+});
+
+window.addEventListener("keydown", (e) => {
+if (busy) return;
+if (e.key === " " || e.key === "Enter") {
+e.preventDefault();
+if (!revealed) reveal();
+return;
+}
+if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
+e.preventDefault();
+grade(Number(e.key));
+}
+if (e.key === "ArrowRight") {
+e.preventDefault();
+advanceToPrefetched_(false);
+}
+});
+
+setBusy(true);
+setStatus("Loading…");
+google.script.run
+.withSuccessHandler((card) => {
+renderCard(card);
+prefetchNextCard_();
+})
+.withFailureHandler(showError)
+.getNextCard();
+</script>
+</body>
 </html>
