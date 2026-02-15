@@ -30,7 +30,7 @@ const CONFIG = {
   // Optional: mp3 filename in a Drive folder (e.g. "1.mp3").
   AUDIO_HEADER: "Audio_path",
   // Drive folder that contains the audio files referenced by AUDIO_HEADER.
-  AUDIO_FOLDER_ID: "1L7jo9HZw_QRj_Kn_fvB9enr5NsADgsyD",
+  AUDIO_FOLDER_ID: "1vNoLw6t3blSslEInNZp7QMB1_T9j8_5_",
 
   // Optional: if present, only TRUE rows are eligible.
   ENABLED_HEADER: "enabled",
@@ -261,46 +261,63 @@ function isTruthySheetValue_(value) {
 }
 
 function serveAudio_(audioPath) {
-  const name = String(audioPath || "").trim();
-  if (!name) {
-    return ContentService.createTextOutput("Missing audio filename.").setMimeType(
-      ContentService.MimeType.TEXT
-    );
-  }
-
-  const cache = CacheService.getScriptCache();
-  const cacheKey = "audio_id:" + name;
-  const cachedId = cache.get(cacheKey);
-  if (cachedId) {
-    try {
-      const blob = DriveApp.getFileById(cachedId).getBlob();
-      blob.setName(name);
-      blob.setContentType("audio/mpeg");
-      return blob;
-    } catch (err) {
-      // Fall through to re-resolve by name.
+  try {
+    const name = String(audioPath || "").trim();
+    if (!name) {
+      return ContentService.createTextOutput("Missing audio filename.").setMimeType(
+        ContentService.MimeType.TEXT
+      );
     }
-  }
 
-  const folderId = String(CONFIG.AUDIO_FOLDER_ID || "").trim();
-  if (!folderId) {
+    const cache = CacheService.getScriptCache();
+    const cacheKey = "audio_id:" + name;
+    const cachedId = cache.get(cacheKey);
+    if (cachedId) {
+      try {
+        const blob = DriveApp.getFileById(cachedId).getBlob();
+        blob.setName(name);
+        blob.setContentType("audio/mpeg");
+        return blob;
+      } catch (err) {
+        // Fall through to re-resolve by name.
+      }
+    }
+
+    const folderId = String(CONFIG.AUDIO_FOLDER_ID || "").trim();
+    if (!folderId) {
+      return ContentService.createTextOutput(
+        "Audio folder not configured (CONFIG.AUDIO_FOLDER_ID)."
+      ).setMimeType(ContentService.MimeType.TEXT);
+    }
+
+    const folder = DriveApp.getFolderById(folderId);
+    const files = folder.getFilesByName(name);
+    if (!files.hasNext()) {
+      return ContentService.createTextOutput(
+        'Audio not found: "' + name + '"'
+      ).setMimeType(ContentService.MimeType.TEXT);
+    }
+
+    const file = files.next();
+    cache.put(cacheKey, file.getId(), 60 * 60 * 6); // 6h
+    const blob = file.getBlob();
+    blob.setName(name);
+    blob.setContentType("audio/mpeg");
+    return blob;
+  } catch (err) {
+    const msg =
+      (err && (err.message || (err.toString && err.toString()))) || "Unknown error";
     return ContentService.createTextOutput(
-      "Audio folder not configured (CONFIG.AUDIO_FOLDER_ID)."
+      "Audio error: " + msg + "\n\nIf this is a Drive permission error, open the Apps Script editor and run authorizeAudioAccess() once, then redeploy."
     ).setMimeType(ContentService.MimeType.TEXT);
   }
+}
 
+function authorizeAudioAccess() {
+  // Run this once from the Apps Script editor to grant Drive permissions.
+  const folderId = String(CONFIG.AUDIO_FOLDER_ID || "").trim();
+  if (!folderId) throw new Error("Missing CONFIG.AUDIO_FOLDER_ID");
   const folder = DriveApp.getFolderById(folderId);
-  const files = folder.getFilesByName(name);
-  if (!files.hasNext()) {
-    return ContentService.createTextOutput('Audio not found: "' + name + '"').setMimeType(
-      ContentService.MimeType.TEXT
-    );
-  }
-
-  const file = files.next();
-  cache.put(cacheKey, file.getId(), 60 * 60 * 6); // 6h
-  const blob = file.getBlob();
-  blob.setName(name);
-  blob.setContentType("audio/mpeg");
-  return blob;
+  const it = folder.getFiles();
+  return { ok: true, hasFiles: it.hasNext() };
 }

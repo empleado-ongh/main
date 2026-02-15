@@ -475,6 +475,19 @@
       function audioUrlFor_(card) {
         const audioPath = card && card.audioPath ? String(card.audioPath).trim() : "";
         if (!audioPath) return "";
+
+        // Supported Audio_path formats:
+        // 1) Full URL (recommended if Drive auth is blocked)
+        // 2) Drive file id (we convert to a public `uc` link)
+        // 3) Filename like "1.mp3" (served by this web app via `?audio=...`, requires Drive scopes)
+        if (/^https?:\/\//i.test(audioPath)) return audioPath;
+        if (/^[a-zA-Z0-9_-]{20,}$/.test(audioPath)) {
+          return (
+            "https://drive.google.com/uc?export=download&id=" +
+            encodeURIComponent(audioPath)
+          );
+        }
+
         const base = window.location.href.split("?")[0];
         return base + "?audio=" + encodeURIComponent(audioPath);
       }

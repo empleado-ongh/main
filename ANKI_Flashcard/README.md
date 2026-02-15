@@ -73,3 +73,10 @@ Optional:
 `/Users/rogermoreno/Documents/ANKI_Flashcard/gas/Code.gs` uses `@OnlyCurrentDoc` + `SpreadsheetApp.getActiveSpreadsheet()` to keep scopes restricted to the current spreadsheet (helps avoid "This app is blocked" errors).
 
 Audio requires Drive read access (the script serves files from the configured Drive folder).
+If you don't get prompted during deployment, open the Apps Script editor and run `authorizeAudioAccess()` once to grant Drive permissions.
+
+If Drive authorization is blocked (you see "This app is blocked"), avoid Drive scopes entirely:
+- Share the audio files as "Anyone with the link"
+- Put either a full public URL, or the Drive *file id* (recommended), into the `Audio_path` cell
+  - file id looks like: `1AbC...` (from a link like `https://drive.google.com/file/d/<ID>/view`)
+  - the app will convert file ids to `https://drive.google.com/uc?export=download&id=<ID>` for playback
