@@ -12,6 +12,7 @@ plugins:
 
 header_pages:
   - archive.md
+  - anki-flashcard.md
 
 defaults:
   - scope:
@@ -24,4 +25,3 @@ defaults:
       type: "pages"
     values:
       layout: "page"
-

@@ -11,6 +11,7 @@ calendar: true
   </p>
   <div class="home-actions">
     <a class="home-button" href="{{ '/archive/' | relative_url }}">Browse archive</a>
+    <a class="home-button" href="{{ '/anki-flashcard/' | relative_url }}">ANKI Flashcard</a>
     <a class="home-link" href="{{ '/feed.xml' | relative_url }}">RSS feed</a>
   </div>
 </section>
