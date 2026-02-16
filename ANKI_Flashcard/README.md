@@ -25,6 +25,7 @@ Minimal web app for reviewing Chinese flashcards:
 4. In `Code.gs`, update `CONFIG`:
    - `SHEET_NAME`: `Flashcards_Sheet`
    - `PROMPT_HEADER`: `Characters`
+   - `TRADITIONAL_HEADER`: `Traditional` (optional)
    - `ANSWER_HEADER`: `Answer`
    - `PINYIN_HEADER`: `Pinyin` (optional)
    - Audio (optional):
@@ -57,7 +58,7 @@ Required columns:
 
 Optional column:
 - `enabled` (TRUE/FALSE). If present, only TRUE rows are reviewed.
-- `Traditional` (optional). If present, the app can show the Traditional equivalent on reveal and lets you toggle whether the big prompt shows Simplified or Traditional.
+- `Traditional` (optional). If present, the app shows Traditional directly under the main `Characters` prompt on the same card.
 
 Progress columns are auto-created (if missing) on first grade:
 - `last_reviewed`

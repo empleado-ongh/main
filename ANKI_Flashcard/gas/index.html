@@ -17,9 +17,9 @@
 --accent: #9effd4;
 --danger: #ff6b6b;
 --radius: 16px;
---hanzi-font: ui-sans-serif, system-ui, -apple-system, "PingFang SC",
-"Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", Segoe UI, Roboto,
-Helvetica, Arial;
+/* PingFang SC is a clean sans Chinese font, visually close to Helvetica style. */
+--hanzi-font: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC",
+"Microsoft YaHei", "Heiti SC", Helvetica, Arial, sans-serif;
 
 /* Grade colors (difficulty grouping; used later for logic) */
 --grade-1: #a100ff;
@@ -78,7 +78,7 @@ overflow: hidden;
 display: flex;
 gap: 12px;
 justify-content: space-between;
-align-items: flex-start;
+align-items: baseline;
 padding: 18px 20px;
 border-bottom: 1px solid var(--line);
 }
@@ -86,53 +86,6 @@ border-bottom: 1px solid var(--line);
 .title {
 font-weight: 700;
 letter-spacing: 0.3px;
-}
-
-.header-right {
-display: flex;
-flex-direction: column;
-align-items: flex-end;
-gap: 8px;
-min-width: 0;
-}
-
-.controls {
-display: flex;
-gap: 8px;
-align-items: center;
-flex-wrap: wrap;
-justify-content: flex-end;
-}
-
-.chip,
-.chip-select {
-appearance: none;
-border: 1px solid var(--line);
-background: rgba(255, 255, 255, 0.04);
-color: rgba(255, 255, 255, 0.86);
-border-radius: 999px;
-padding: 7px 10px;
-font-weight: 700;
-font-size: 12px;
-letter-spacing: 0.18px;
-cursor: pointer;
-transition: transform 140ms ease, background 140ms ease,
-border-color 140ms ease, opacity 140ms ease;
-user-select: none;
-touch-action: manipulation;
-}
-.chip:hover,
-.chip-select:hover {
-background: rgba(255, 255, 255, 0.08);
-border-color: rgba(255, 255, 255, 0.18);
-transform: translateY(-1px);
-}
-.chip:active,
-.chip-select:active {
-transform: translateY(0px);
-}
-.chip-select {
-padding-right: 28px;
 }
 
 .status {
@@ -145,6 +98,7 @@ overflow-wrap: anywhere;
 
 .body {
 padding: 22px 20px 18px;
+text-align: center;
 }
 
 .prompt {
@@ -157,6 +111,20 @@ letter-spacing: 0.2px;
 padding: 6px 0 2px;
 text-shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
 overflow-wrap: anywhere;
+}
+
+.prompt-traditional {
+font-family: var(--hanzi-font);
+text-align: center;
+font-size: clamp(30px, 10vw, 72px);
+line-height: 1.08;
+font-weight: 700;
+margin-top: 6px;
+color: rgba(255, 255, 255, 0.78);
+overflow-wrap: anywhere;
+}
+.prompt-traditional:empty {
+display: none;
 }
 
 .prompt-wrap {
@@ -203,31 +171,13 @@ display: block;
 
 .meta {
 color: var(--muted-2);
-margin-top: 8px;
+font-size: 16px;
+margin-top: 6px;
 text-align: center;
 display: none;
-flex-direction: column;
-align-items: center;
-gap: 6px;
 }
 .card.is-revealed .meta {
-display: flex;
-}
-
-.meta-line:empty {
-display: none;
-}
-
-.meta-pinyin {
-font-size: 16px;
-}
-
-.meta-alt {
-font-family: var(--hanzi-font);
-font-size: clamp(20px, 6.2vw, 34px);
-line-height: 1.08;
-font-weight: 760;
-color: rgba(255, 255, 255, 0.78);
+display: block;
 }
 
 .divider {
@@ -458,30 +408,15 @@ justify-content: center;
 <div class="card" id="card">
 <div class="header">
 <div class="title">ANKI Flashcard</div>
-<div class="header-right">
-<div class="controls" aria-label="Display settings">
-<button class="chip" id="scriptToggle" type="button" title="Toggle prompt script (Simplified/Traditional)">
-简
-</button>
-<select class="chip-select" id="fontSelect" title="Hanzi font" aria-label="Hanzi font">
-<option value="default">Font: Default</option>
-<option value="serif">Font: Serif (Song)</option>
-<option value="cursive">Font: Cursive (Kai)</option>
-<option value="custom">Font: Custom…</option>
-</select>
-</div>
 <div class="status" id="status">Loading…</div>
-</div>
 </div>
 <div class="body">
 <div class="prompt-wrap">
 <div class="prompt" id="prompt"> </div>
+<div class="prompt-traditional" id="promptTraditional"></div>
 </div>
 <audio id="audio" preload="auto"></audio>
-<div class="meta" id="meta">
-<div class="meta-line meta-pinyin" id="metaPinyin"></div>
-<div class="meta-line meta-alt" id="metaAlt"></div>
-</div>
+<div class="meta" id="meta"></div>
 <div class="divider" id="divider"></div>
 <div class="answer" id="answer"></div>
 </div>
@@ -535,117 +470,20 @@ Reveal
   const cardEl = document.getElementById("card");
   const statusEl = document.getElementById("status");
   const promptEl = document.getElementById("prompt");
-  const metaPinyinEl = document.getElementById("metaPinyin");
-  const metaAltEl = document.getElementById("metaAlt");
+  const promptTraditionalEl = document.getElementById("promptTraditional");
+  const metaEl = document.getElementById("meta");
   const answerEl = document.getElementById("answer");
   const audioEl = document.getElementById("audio");
   const playBtn = document.getElementById("playBtn");
   const revealBtn = document.getElementById("revealBtn");
   const nextBtn = document.getElementById("nextBtn");
   const gradeBtns = Array.from(document.querySelectorAll(".grade"));
-  const scriptToggleBtn = document.getElementById("scriptToggle");
-  const fontSelect = document.getElementById("fontSelect");
 
-  const LS_SCRIPT_MODE = "anki_script_mode"; // "simplified" | "traditional"
-  const LS_HANZI_FONT_PRESET = "anki_hanzi_font_preset"; // "default" | "serif" | "cursive" | "custom"
-  const LS_HANZI_FONT_CUSTOM = "anki_hanzi_font_custom";
-
-  const FALLBACK_HANZI_STACK =
-    'ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", Segoe UI, Roboto, Helvetica, Arial';
-
-  const HANZI_FONT_STACKS = {
-    default: FALLBACK_HANZI_STACK,
-    serif:
-      '"Songti SC", "STSong", "SimSun", "Noto Serif SC", serif, ' +
-      FALLBACK_HANZI_STACK,
-    cursive:
-      '"Kaiti SC", "KaiTi", "STKaiti", "DFKai-SB", cursive, ' +
-      FALLBACK_HANZI_STACK
-  };
-
-  function getScriptMode_() {
-    const raw = String(localStorage.getItem(LS_SCRIPT_MODE) || "").toLowerCase();
-    return raw === "traditional" ? "traditional" : "simplified";
-  }
-
-  function setScriptMode_(mode) {
-    localStorage.setItem(
-      LS_SCRIPT_MODE,
-      mode === "traditional" ? "traditional" : "simplified"
-    );
-  }
-
-  function setScriptToggleUI_() {
-    const mode = getScriptMode_();
-    scriptToggleBtn.textContent = mode === "traditional" ? "繁" : "简";
-    scriptToggleBtn.setAttribute(
-      "aria-label",
-      mode === "traditional"
-        ? "Prompt script: Traditional (tap to switch)"
-        : "Prompt script: Simplified (tap to switch)"
-    );
-  }
-
-  function promptTextForMode_(card, mode) {
-    const simp = (card && card.prompt) || "";
-    const trad = (card && card.traditional) || "";
-    if (mode === "traditional" && trad) return trad;
-    return simp;
-  }
-
-  function altTextForMode_(card, mode) {
-    const simp = (card && card.prompt) || "";
-    const trad = (card && card.traditional) || "";
-    if (!trad) return "";
-    if (mode === "traditional") {
-      if (!simp || simp === trad) return "";
-      return simp;
-    }
-    if (!trad || trad === simp) return "";
-    return trad;
-  }
-
-  function getFontPreset_() {
-    const raw = String(localStorage.getItem(LS_HANZI_FONT_PRESET) || "").toLowerCase();
-    return ["default", "serif", "cursive", "custom"].includes(raw) ? raw : "default";
-  }
-
-  function setFontPreset_(preset) {
-    localStorage.setItem(LS_HANZI_FONT_PRESET, preset);
-  }
-
-  function setCustomFont_(value) {
-    localStorage.setItem(LS_HANZI_FONT_CUSTOM, String(value || "").trim());
-  }
-
-  function getCustomFont_() {
-    return String(localStorage.getItem(LS_HANZI_FONT_CUSTOM) || "").trim();
-  }
-
-  function applyHanziFont_() {
-    const preset = getFontPreset_();
-    let stack = HANZI_FONT_STACKS[preset] || HANZI_FONT_STACKS.default;
-    if (preset === "custom") {
-      const custom = getCustomFont_();
-      if (custom) {
-        // Always append our fallback stack to keep Hanzi glyph coverage.
-        stack = custom + ", " + FALLBACK_HANZI_STACK;
-      } else {
-        stack = HANZI_FONT_STACKS.default;
-      }
-    }
-
-    document.documentElement.style.setProperty("--hanzi-font", stack);
-    fontSelect.value = preset;
-  }
-
-  function rerenderScriptOnly_() {
-    if (!current) return;
-    const mode = getScriptMode_();
-    promptEl.textContent = promptTextForMode_(current, mode);
-    if (revealed) {
-      metaAltEl.textContent = altTextForMode_(current, mode);
-    }
+  function traditionalText_(card) {
+    const simplified = (card && card.prompt) || "";
+    const traditional = (card && card.traditional) || "";
+    if (!traditional || traditional === simplified) return "";
+    return traditional;
   }
 
   const preloadAudioEl = new Audio();
@@ -704,9 +542,9 @@ Reveal
 
     cardEl.classList.remove("is-revealed");
 
-    promptEl.textContent = promptTextForMode_(card, getScriptMode_());
-    metaPinyinEl.textContent = "";
-    metaAltEl.textContent = "";
+    promptEl.textContent = card.prompt || "";
+    promptTraditionalEl.textContent = traditionalText_(card);
+    metaEl.textContent = "";
     answerEl.textContent = card.answer || "";
     answerEl.classList.remove("show");
 
@@ -774,8 +612,7 @@ Reveal
     if (!current) return;
     revealed = true;
     cardEl.classList.add("is-revealed");
-    metaPinyinEl.textContent = current.pinyin ? current.pinyin : "";
-    metaAltEl.textContent = altTextForMode_(current, getScriptMode_());
+    metaEl.textContent = current.pinyin ? current.pinyin : "";
     answerEl.classList.add("show");
     setBusy(false);
   }
@@ -815,39 +652,6 @@ Reveal
     setStatus("Audio failed to load", true);
   });
 
-  scriptToggleBtn.addEventListener("click", () => {
-    const next = getScriptMode_() === "traditional" ? "simplified" : "traditional";
-    setScriptMode_(next);
-    setScriptToggleUI_();
-    rerenderScriptOnly_();
-  });
-
-  fontSelect.addEventListener("change", () => {
-    const nextPreset = String(fontSelect.value || "default");
-    if (nextPreset !== "custom") {
-      setFontPreset_(nextPreset);
-      applyHanziFont_();
-      return;
-    }
-
-    // Keep this simple: custom is assumed to be an installed local font family,
-    // or a full CSS font-family stack. (Webfont loading is a separate concern.)
-    const currentCustom = getCustomFont_();
-    const input = window.prompt(
-      'Custom Hanzi font-family (examples: "Kaiti SC"  or  "MyFont", "Kaiti SC")',
-      currentCustom
-    );
-    if (input === null) {
-      // User cancelled; revert select to the previous preset.
-      fontSelect.value = getFontPreset_();
-      return;
-    }
-
-    setCustomFont_(input);
-    setFontPreset_("custom");
-    applyHanziFont_();
-  });
-
   window.addEventListener("keydown", (e) => {
     if (busy) return;
     if (e.key === " " || e.key === "Enter") {
@@ -867,9 +671,6 @@ Reveal
 
   setBusy(true);
   setStatus("Loading…");
-
-  setScriptToggleUI_();
-  applyHanziFont_();
 
   google.script.run
     .withSuccessHandler((card) => {
