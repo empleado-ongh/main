@@ -57,6 +57,7 @@ Required columns:
 
 Optional column:
 - `enabled` (TRUE/FALSE). If present, only TRUE rows are reviewed.
+- `Traditional` (optional). If present, the app can show the Traditional equivalent on reveal and lets you toggle whether the big prompt shows Simplified or Traditional.
 
 Progress columns are auto-created (if missing) on first grade:
 - `last_reviewed`

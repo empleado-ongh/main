@@ -20,6 +20,7 @@ const CONFIG = {
 
   // Header names (case/spacing-insensitive) used to locate columns.
   PROMPT_HEADER: "Characters",
+  TRADITIONAL_HEADER: "Traditional", // optional (Traditional equivalent of PROMPT_HEADER)
   ANSWER_HEADER: "Answer",
   PINYIN_HEADER: "Pinyin", // optional
 
@@ -59,6 +60,7 @@ function getNextCard() {
   const headerMap = buildHeaderMap_(headerValues);
 
   const promptCol = mustCol_(headerMap, CONFIG.PROMPT_HEADER, headerValues);
+  const traditionalCol = optionalCol_(headerMap, CONFIG.TRADITIONAL_HEADER);
   const answerCol = mustCol_(headerMap, CONFIG.ANSWER_HEADER, headerValues);
   const pinyinCol = optionalCol_(headerMap, CONFIG.PINYIN_HEADER);
   const audioCol = optionalCol_(headerMap, CONFIG.AUDIO_HEADER);
@@ -91,6 +93,8 @@ function getNextCard() {
     candidates.push({
       rowNumber: r + 1,
       prompt: String(prompt),
+      traditional:
+        traditionalCol !== null ? String(row[traditionalCol] ?? "") : "",
       answer: String(row[answerCol] ?? ""),
       pinyin: pinyinCol !== null ? String(row[pinyinCol] ?? "") : "",
       audioPath: audioCol !== null ? String(row[audioCol] ?? "").trim() : ""
@@ -321,4 +325,3 @@ function testAudioData() {
     );
   }
 }
-
